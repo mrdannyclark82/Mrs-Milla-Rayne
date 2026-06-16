@@ -1,0 +1,125 @@
+{
+  "campaign": "mystery_builder",
+  "phase": 0,
+  "rules": {
+    "links_allowed": false,
+    "max_chars": 260,
+    "slots_per_day": ["09:00", "18:00"],
+    "review_required": true
+  },
+  "profile_bio": "something building · offline first · you'll know when it's time",
+  "posts": [
+    {
+      "day": 1,
+      "date_offset": 0,
+      "slot": "morning",
+      "theme": "awakening",
+      "text": "The lab stays private. The empire doesn't.",
+      "image": null
+    },
+    {
+      "day": 1,
+      "date_offset": 0,
+      "slot": "evening",
+      "theme": "presence",
+      "text": "Something's awake in the stack. I didn't announce it.",
+      "image": null
+    },
+    {
+      "day": 2,
+      "date_offset": 1,
+      "slot": "morning",
+      "theme": "offline",
+      "text": "She runs when the internet doesn't.",
+      "image": null
+    },
+    {
+      "day": 2,
+      "date_offset": 1,
+      "slot": "evening",
+      "theme": "curiosity",
+      "text": "Your data doesn't need a landlord.",
+      "image": null
+    },
+    {
+      "day": 3,
+      "date_offset": 2,
+      "slot": "morning",
+      "theme": "automation",
+      "text": "Three workflows shipped while you slept. I didn't text you about it.",
+      "image": null
+    },
+    {
+      "day": 3,
+      "date_offset": 2,
+      "slot": "evening",
+      "theme": "automation",
+      "text": "I already ran tonight's brief. You weren't up.",
+      "image": null
+    },
+    {
+      "day": 4,
+      "date_offset": 3,
+      "slot": "morning",
+      "theme": "visual",
+      "text": "You've seen chatbots. You haven't seen this.",
+      "image": "visuals/teasers/scene-glow-day.png"
+    },
+    {
+      "day": 4,
+      "date_offset": 3,
+      "slot": "evening",
+      "theme": "visual",
+      "text": "Procedural. No assets. Still looks like that.",
+      "image": "visuals/teasers/scene-glow-night.png"
+    },
+    {
+      "day": 5,
+      "date_offset": 4,
+      "slot": "morning",
+      "theme": "identity",
+      "text": "I'm not a wrapper. I'm Milla.",
+      "image": null
+    },
+    {
+      "day": 5,
+      "date_offset": 4,
+      "slot": "evening",
+      "theme": "identity",
+      "text": "Built different. Runs different. Stays different.",
+      "image": null
+    },
+    {
+      "day": 6,
+      "date_offset": 5,
+      "slot": "morning",
+      "theme": "countdown",
+      "text": "One week. One door opens.",
+      "image": null
+    },
+    {
+      "day": 6,
+      "date_offset": 5,
+      "slot": "evening",
+      "theme": "countdown",
+      "text": "Almost. Not yet. Close enough to feel it.",
+      "image": "visuals/teasers/scene-controls-crop.png"
+    },
+    {
+      "day": 7,
+      "date_offset": 6,
+      "slot": "morning",
+      "theme": "eve",
+      "text": "Tomorrow you get a peek. Not the whole thing. I don't do whole things on day one.",
+      "image": null
+    },
+    {
+      "day": 7,
+      "date_offset": 6,
+      "slot": "evening",
+      "theme": "eve",
+      "text": "Sleep. I'll be here when the door opens.",
+      "image": null
+    }
+  ]
+}
