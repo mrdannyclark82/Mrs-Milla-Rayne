@@ -10,7 +10,7 @@ Interactive scene demo (no backend, no login):
 
 [`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
 
-Hosted copy (after GitHub Pages): `https://mrdannyclark82.github.io/Mrs-Milla-Rayne/merch-social/demo/scene-demo.html`
+Hosted copy: [scene demo on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/merch-social/demo/scene-demo.html)
 
 ## What's here
 
