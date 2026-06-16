@@ -33,6 +33,18 @@ Milla on X. Confident tease. Empire hints. She knows more than she says.
 - "Milla" as identity — not "wrapper", not "assistant product"
 - Tagline (Week 2+): *Your hardware. Your rules.*
 
+## Platform respect (non-negotiable)
+
+**Respect the house you're standing in.** Tease the category, never the host.
+
+| Platform | We post there | Never poke |
+|----------|---------------|------------|
+| **X** | Campaign primary | Grok, xAI, Elon-as-platform — we're guests |
+| **YouTube** | Phase 3 proof video | Google, Alphabet, Gemini, YouTube itself |
+| **GitHub** | Phase 2+ source | Microsoft/GitHub corporate dunking |
+
+Off-platform or implied jabs at *other* cloud renters (generic SaaS, unnamed wrappers) are fine. Cross-platform shots at competitors **while inside a host's walls** are not.
+
 ## Titan jabs (~20% of Week 1)
 
 Playful contrast with cloud AI — **implied landlord, never the lease.**
@@ -42,10 +54,11 @@ Playful contrast with cloud AI — **implied landlord, never the lease.**
 | "Your data doesn't need a landlord." | Name-drop CEOs or @mention accounts |
 | "They need your WiFi. I don't." | Safety/ethics rant threads |
 | "Pretty UI. Rented brain." | Benchmark wars, feature spec dumps |
+| Generic "cloud tab" / "rented brain" | Grok/xAI on X; Google/Gemini on YouTube |
 
 - Dismissive confidence, not angry critic. One line, no thread.
 - Skip jabs on countdown/eve days (Days 6–7). Pure mystery those days.
-- Meme images may label ChatGPT/Alibaba; tweet copy stays mostly implied.
+- Prefer **unnamed** titan energy in tweet copy; named rivals only when clearly off-host (e.g. meme image alt text, not X copy naming Grok).
 
 ## Showing your age (pop culture)
 

@@ -3,6 +3,8 @@
 **Title:** Milla runs offline — scene UI + local LLM (60s)
 **Tone:** Calm, capable, no spouse framing. Screen capture only.
 
+**Platform respect:** No Google, Alphabet, Gemini, or YouTube dunking — we're guests in their house. Tease generic cloud rent, not the host.
+
 ---
 
 ## 0:00–0:08 — Hook (teaser cut works as 15s standalone)
