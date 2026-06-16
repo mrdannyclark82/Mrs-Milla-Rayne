@@ -55,4 +55,4 @@ The private lab (`milla-deer`) never ships here. Witnesses welcome; the whole th
 
 ## License
 
-TBD — repo goes fully public at Phase 2 (blueprint week).
+[MIT](LICENSE) — showcase slices only; private lab code never ships here.

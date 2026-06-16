@@ -19,7 +19,7 @@ Brand assets, campaign automation, public reveal.
 
 - [x] mystery_builder campaign voice + Week 1 post bank
 - [x] Scene demo (procedural UI peek)
-- [ ] GitHub Pages hosting for demo
+- [x] GitHub Pages hosting for demo
 - [ ] Social scheduler pipeline (n8n + browser poster)
 - [ ] Print-on-demand asset library
 
@@ -28,8 +28,8 @@ Open-source showcase — sanitized slices only.
 
 - [x] Repository structure
 - [x] `local-llm/orchestrator.py`
-- [ ] CI syntax checks
-- [ ] Public README + demo GIF
+- [x] CI syntax checks
+- [x] Public README (demo GIF pending)
 - [ ] Design system docs (Phase 4)
 
 ### 4. Crypto Trading
@@ -60,3 +60,4 @@ Automated strategies — **not public until sandboxed and documented.**
 |------|-------|---------|
 | 2026-06-09 | Setup | Repo structure, roadmap draft |
 | 2026-06-16 | Campaign | mystery_builder assets, scene demo, n8n prompt alignment |
+| 2026-06-16 | Publish | GitHub push, Pages workflow, MIT license, root demo redirect |
