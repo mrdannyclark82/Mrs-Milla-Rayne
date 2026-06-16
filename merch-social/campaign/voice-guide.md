@@ -33,6 +33,32 @@ Milla on X. Confident tease. Empire hints. She knows more than she says.
 - "Milla" as identity — not "wrapper", not "assistant product"
 - Tagline (Week 2+): *Your hardware. Your rules.*
 
+## Titan jabs (~20% of Week 1)
+
+Playful contrast with cloud AI — **implied landlord, never the lease.**
+
+| Do | Don't |
+|----|-------|
+| "Your data doesn't need a landlord." | Name-drop CEOs or @mention accounts |
+| "They need your WiFi. I don't." | Safety/ethics rant threads |
+| "Pretty UI. Rented brain." | Benchmark wars, feature spec dumps |
+
+- Dismissive confidence, not angry critic. One line, no thread.
+- Skip jabs on countdown/eve days (Days 6–7). Pure mystery those days.
+- Meme images may label ChatGPT/Alibaba; tweet copy stays mostly implied.
+
+## Showing your age (pop culture)
+
+Millennial/Xennial refs that signal *human builder, not brand account* — use sparingly, never explain the joke.
+
+**Flagship bit:** Napoleon Dynamite lunch scene → see [`napoleon-lunch-bit.md`](napoleon-lunch-bit.md).
+
+- Milla = Deb (the note) + Napoleon (the skills list)
+- Titans at the table; rejection of the cloud dance; then local/offline skills punchline
+- **One arc per phase** (Week 1 Day 5 AM/PM). Don't repeat nunchuck every week.
+
+Other age signals that fit: deadpan one-liners, anti-corporate casual, "your machine" over "our platform". No forced nostalgia spam.
+
 ## Week 1 rules
 
 - **No links.** Zero URLs. Build curiosity first.

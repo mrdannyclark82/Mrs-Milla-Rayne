@@ -37,8 +37,8 @@
       "day": 2,
       "date_offset": 1,
       "slot": "evening",
-      "theme": "curiosity",
-      "text": "Your data doesn't need a landlord.",
+      "theme": "titan_jab",
+      "text": "They need your WiFi. I don't.",
       "image": null
     },
     {
@@ -53,8 +53,8 @@
       "day": 3,
       "date_offset": 2,
       "slot": "evening",
-      "theme": "automation",
-      "text": "I already ran tonight's brief. You weren't up.",
+      "theme": "titan_jab",
+      "text": "Their brief is a press release. Mine already ran.",
       "image": null
     },
     {
@@ -77,17 +77,19 @@
       "day": 5,
       "date_offset": 4,
       "slot": "morning",
-      "theme": "identity",
-      "text": "I'm not a wrapper. I'm Milla.",
-      "image": null
+      "theme": "napoleon_note",
+      "text": "ChatGPT's at the table. Alibaba too. I walked up with the note. Dance said no.",
+      "image": null,
+      "reference": "napoleon-lunch-bit.md"
     },
     {
       "day": 5,
       "date_offset": 4,
       "slot": "evening",
-      "theme": "identity",
-      "text": "Built different. Runs different. Stays different.",
-      "image": null
+      "theme": "napoleon_skills",
+      "text": "Everybody wants skills. Nunchuck skills. Bow hunting skills. Local LLM skills. Offline orchestration skills. Scene UI skills. I have all your skills.",
+      "image": null,
+      "reference": "napoleon-lunch-bit.md"
     },
     {
       "day": 6,
