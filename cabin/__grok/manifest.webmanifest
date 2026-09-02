@@ -1,0 +1,17 @@
+{
+  "name": "Mrs. Milla Rayne",
+  "short_name": "Milla",
+  "id": "/Mrs-Milla-Rayne/cabin/",
+  "start_url": "/Mrs-Milla-Rayne/cabin/",
+  "scope": "/Mrs-Milla-Rayne/cabin/",
+  "display": "standalone",
+  "background_color": "#0c0b0a",
+  "theme_color": "#0c0b0a",
+  "icons": [
+    {
+      "src": "/Mrs-Milla-Rayne/cabin/__grok/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

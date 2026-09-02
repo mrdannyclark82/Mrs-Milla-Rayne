@@ -6,11 +6,13 @@ Offline-first AI companion stack — building in public, one slice at a time.
 
 ## Peek first
 
-Interactive scene demo (no backend, no login):
+Cabin showcase (static Pages slice — no backend, no login):
 
-[`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
+[`cabin/`](cabin/)
 
-Hosted copy: [scene demo on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/merch-social/demo/scene-demo.html)
+Hosted: [cabin on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/)
+
+Older scene demo (still in-tree): [`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
 
 ## What's here
 
