@@ -6,20 +6,19 @@ Offline-first AI companion stack — building in public, one slice at a time.
 
 ## Peek first
 
-Cabin showcase (static Pages slice — no backend, no login):
+**Front door:** cabin showcase (static Pages slice — no backend, no login).
 
-[`cabin/`](cabin/)
+[`cabin/`](cabin/) · Hosted: [cabin on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/)
 
-Hosted: [cabin on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/)
-
-Older scene demo (still in-tree): [`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
+Legacy procedural peek (not the primary CTA): [`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
 
 ## What's here
 
 | Module | Status | Notes |
 |--------|--------|-------|
+| [`cabin/`](cabin/) | **Live** | Public Pages showcase door |
 | [`local-llm/`](milla-offline-stack/local-llm/) | **Demo-ready** | Ollama orchestrator |
-| [`merch-social/`](merch-social/) | **Active** | Campaign assets + scene demo |
+| [`merch-social/`](merch-social/) | **Active** | Campaign assets + legacy scene peek |
 | `piper-tts/` | Planned | Custom voice |
 | `vector-db/` | Planned | Local memory (FAISS) |
 | `vision-system/` | Planned | Environment awareness |

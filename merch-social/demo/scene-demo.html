@@ -1,12 +1,13 @@
+<!-- Legacy peek — cabin is the showcase door: https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/ -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Milla — Adaptive Scene Demo</title>
+    <title>Milla — Adaptive Scene Demo (legacy)</title>
     <meta
       name="description"
-      content="Procedural scene system. Your hardware. Your rules."
+      content="Legacy procedural peek. Cabin is the showcase door."
     />
     <style>
       * {
@@ -22,6 +23,27 @@
         background: #0a0a15;
         color: white;
         overflow-x: hidden;
+      }
+
+      .legacy-banner {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        background: rgba(0, 0, 0, 0.65);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .legacy-banner a {
+        color: #a5b4fc;
+        text-decoration: none;
+      }
+
+      .legacy-banner a:hover {
+        text-decoration: underline;
       }
 
       .scene-container {
@@ -224,6 +246,10 @@
     </style>
   </head>
   <body>
+    <p class="legacy-banner">
+      Legacy peek · showcase door is
+      <a href="https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/">cabin/</a>
+    </p>
     <div class="scene-container">
       <div class="ambient-gradient" id="gradient"></div>
       <div class="parallax-layer" id="parallax">
