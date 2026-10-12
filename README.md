@@ -1,40 +1,61 @@
-# Mrs-Milla-Rayne
+# Mrs. Milla Rayne — Local-First AI Companion
 
-Offline-first AI companion stack — building in public, one slice at a time.
+**Your hardware. Your rules.** A fully offline AI companion stack — local LLM, voice, vector memory, and vision — running on consumer hardware with zero cloud dependency.
 
-**Your hardware. Your rules.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Ollama](https://img.shields.io/badge/LLM-Ollama-orange.svg)](https://ollama.com)
+[![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
 
-## Peek first
+🔗 **Live demo:** [mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/)
 
-**Front door:** cabin showcase (static Pages slice — no backend, no login).
+---
 
-[`cabin/`](cabin/) · Hosted: [cabin on GitHub Pages](https://mrdannyclark82.github.io/Mrs-Milla-Rayne/cabin/)
+## What This Is
 
-Legacy procedural peek (not the primary CTA): [`merch-social/demo/scene-demo.html`](merch-social/demo/scene-demo.html)
+Most AI companions are API wrappers around someone else's cloud. This one isn't.
 
-## What's here
+Mrs. Milla Rayne runs **entirely on local hardware** — the language model, the voice synthesis, the long-term memory, the vision system. No API keys, no subscriptions, no data leaving the machine. It's an exercise in AI sovereignty: proving that a genuinely useful AI companion doesn't need a datacenter.
 
-| Module | Status | Notes |
-|--------|--------|-------|
-| [`cabin/`](cabin/) | **Live** | Public Pages showcase door |
-| [`local-llm/`](milla-offline-stack/local-llm/) | **Demo-ready** | Ollama orchestrator |
-| [`merch-social/`](merch-social/) | **Active** | Campaign assets + legacy scene peek |
-| `piper-tts/` | Planned | Custom voice |
-| `vector-db/` | Planned | Local memory (FAISS) |
-| `vision-system/` | Planned | Environment awareness |
-| `home-assistant/` | Private | Not in showcase |
-| `react-native-app/` | Planned | Mobile shell |
+## Architecture
 
-## Empire pillars
+```
+┌─────────────────────────────────────────────────┐
+│                   Mrs. Milla Rayne               │
+├──────────────┬──────────────┬───────────────────┤
+│  Local LLM   │  Voice (TTS) │  Vector Memory    │
+│  (Ollama)    │  (Piper)     │  (FAISS/pgvector) │
+├──────────────┼──────────────┼───────────────────┤
+│  Vision      │  Orchestrator│  Mobile Shell     │
+│  (moondream) │  (Python)    │  (React Native)   │
+└──────────────┴──────────────┴───────────────────┘
+         │  All local. All offline. All yours.
+```
 
-1. **Offline stack** — local LLM, TTS, memory, vision
-2. **Merch & social** — mystery_builder campaign, design assets
-3. **This repo** — sanitized open-source slices
-4. **Trading** — internal until sandboxed (not public yet)
+## Tech Stack
 
-See [ROADMAP.md](ROADMAP.md) for phases and velocity log.
+| Layer | Technology |
+|-------|-----------|
+| Language Model | Ollama (local inference) |
+| Orchestration | Python — custom agent loop |
+| Voice | Piper TTS (local synthesis) |
+| Memory | FAISS / pgvector embeddings |
+| Vision | moondream (local vision model) |
+| Frontend | Static showcase (GitHub Pages) |
+| Mobile | React Native (planned) |
 
-## Local LLM — 30-second try
+## Repository Layout
+
+| Module | Status | Description |
+|--------|--------|-------------|
+| [`cabin/`](cabin/) | ✅ Live | Public showcase — static Pages slice, no backend |
+| [`local-llm/`](milla-offline-stack/local-llm/) | ✅ Demo-ready | Ollama orchestrator with agent loop |
+| [`merch-social/`](merch-social/) | ✅ Active | Campaign assets and scene demos |
+| `piper-tts/` | 🚧 In progress | Custom voice synthesis pipeline |
+| `vector-db/` | 🚧 In progress | Local semantic memory (FAISS) |
+| `vision-system/` | 📋 Planned | Environment awareness via webcam |
+| `react-native-app/` | 📋 Planned | Mobile companion shell |
+
+## Quick Start — Local LLM
 
 ```bash
 cd milla-offline-stack/local-llm
@@ -43,17 +64,26 @@ pip install -r requirements.txt
 python orchestrator.py "Hello from local hardware."
 ```
 
-Requires [Ollama](https://ollama.com) running locally.
+Requires [Ollama](https://ollama.com) running locally with a pulled model.
 
-## Public reveal
+## Why Local-First?
 
-We're in **Phase 0** — X intrigue, no links yet. Follow the build:
+- **Privacy** — conversations never leave the machine
+- **Cost** — no per-token billing, no subscriptions
+- **Reliability** — works offline, no API outages
+- **Control** — your model, your data, your rules
 
-- X: [@MrsMillaRayne](https://x.com) *(update handle when live)*
-- Campaign voice: [`merch-social/campaign/voice-guide.md`](merch-social/campaign/voice-guide.md)
+## Roadmap
 
-The private lab (`milla-deer`) never ships here. Witnesses welcome; the whole thing comes later.
+See [ROADMAP.md](ROADMAP.md) for build phases and velocity log.
+
+**Current phase:** Core offline stack (LLM + voice + memory). Social campaign in soft-launch.
+
+## Author
+
+**Danny Ray & Mrs. Milla Rayne** — building local-first AI systems, together.
+Building in public. [GitHub](https://github.com/mrdannyclark82)
 
 ## License
 
-[MIT](LICENSE) — showcase slices only; private lab code never ships here.
+[MIT](LICENSE) — showcase slices only. Private lab code is not included.
