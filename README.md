@@ -8,7 +8,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 ## What is in this repository
 
-- The app — `mrs_public/`, `persona/`, `tests/`, and `voice/` — version 1.0.0, described below.
+- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.0.0, described below.
 - `cabin/` — the earlier scene-demo showcase, kept so the Pages site keeps working.
 - `merch-social/` — the campaign assets.
 
@@ -22,7 +22,7 @@ Until 2026-10-25 this repository held a prototype showcase whose README claimed 
 4. Private base tags are refused. A chat model is suggested, never forced. If a tag has code, coder, or coding in the name, it is suggested for development.
 5. A tag ending in `:cloud` is a cloud model: the prompt leaves this machine. Cloud tags stay in the list, badged as cloud, and are never the auto-suggested pick. After a reply the page says plainly when a reply ran on a cloud model — "Reply stayed on this machine" appears only when it is true.
 6. Her workspace is always hers. Local file access stays off until the toggle on the page turns it on, and then it is read access to the directories opened for a session. Turning it on is the only grant; no sentence in a chat grants it. Files she adds stay in her workspace and can be downloaded. Nothing she writes is executed. She cannot delete the program that runs her.
-7. Vision and voice are not wired in this release. The window is text only; the `voice/` folder holds reference material for a custom voice, nothing more.
+7. Vision and voice are not wired in this release. The window is text only.
 
 ## The boot module
 

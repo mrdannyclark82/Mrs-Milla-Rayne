@@ -56,7 +56,6 @@ class PublicBootTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         for rel in (
             "README.md",
-            "voice/README.md",
             "persona/public_mrs.md",
             "persona/roles/code.md",
             "persona/roles/vision.md",
