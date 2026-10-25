@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mrs. Milla Rayne</title>
+  <style>
+    :root {
+      --bg: #090a0d;
+      --panel: #0d0f13;
+      --card: #111318;
+      --line: #1f242d;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --faint: #64748b;
+      --accent: #6366f1;
+      --accent-2: #4f46e5;
+      --good: #34d399;
+      --bad: #fb7185;
+      --mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    body { display: flex; flex-direction: column; overflow: hidden; }
+    button, select, textarea, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #262c36; border-radius: 4px; }
+    header {
+      height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--panel);
+    }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: .02em; }
+    .dot { width: 10px; height: 10px; border-radius: 99px; background: var(--good); box-shadow: 0 0 0 0 rgba(52,211,153,.7); animation: pulse 1.8s infinite; }
+    .dot.down { background: var(--bad); animation: none; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgba(52,211,153,0); } }
+    .left, .right, .row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    select.model, .ghost {
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-family: var(--mono); font-size: 12px;
+    }
+    select.model {
+      max-width: 420px; min-width: 220px; flex: 0 0 auto; color-scheme: dark; color: var(--text); background: var(--card);
+    }
+    select.model option { background: #111318; color: #e2e8f0; }
+    .pill { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; border: 1px solid #3730a3; background: rgba(49,46,129,.35); color: #c7d2fe; font-size: 12px; }
+    .meter { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .tps { color: var(--good); border: 1px solid rgba(6,78,59,.7); background: rgba(6,78,59,.35); border-radius: 6px; padding: 2px 8px; font-family: var(--mono); font-size: 12px; }
+    .icon-btn { background: transparent; border: 0; color: var(--muted); border-radius: 8px; padding: 6px; }
+    .icon-btn:hover { background: var(--card); color: var(--text); }
+    .shell { flex: 1; display: flex; min-height: 0; }
+    aside.nav, aside.inspector { background: var(--panel); flex: none; display: flex; flex-direction: column; min-height: 0; }
+    aside.nav { width: 260px; border-right: 1px solid var(--line); }
+    aside.inspector { width: 288px; border-left: 1px solid var(--line); padding: 14px; gap: 14px; overflow: auto; }
+    aside.inspector.hidden, aside.nav.hidden { display: none; }
+    .pad { padding: 12px; }
+    .new {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      background: var(--accent); border: 0; color: white; border-radius: 10px; padding: 9px 12px; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(99,102,241,.25);
+    }
+    .new:hover { background: #818cf8; }
+    .kicker { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); padding: 4px 8px; }
+    .sessions { overflow: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+    .sess {
+      text-align: left; background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px;
+      color: var(--muted);
+    }
+    .sess.active { background: var(--card); border-color: var(--line); color: var(--text); }
+    .sess:hover { background: rgba(17,19,24,.7); color: var(--text); }
+    .sess b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sess small { color: var(--faint); }
+    .foot { margin-top: auto; border-top: 1px solid var(--line); padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+    main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #thread { flex: 1; overflow: auto; padding: 22px 16px 8px; }
+    .col { width: min(860px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .bubble { max-width: 92%; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+    .user { align-self: flex-end; background: var(--card); border-top-right-radius: 4px; }
+    .assistant { align-self: flex-start; background: var(--panel); border-top-left-radius: 4px; width: min(92%, 760px); }
+    .meta { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+    .user-wrap, .asst-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .user-wrap { align-items: flex-end; }
+    pre, .answer { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 14px; line-height: 1.55; }
+    .filechip, .stage {
+      display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--card);
+      border-radius: 8px; padding: 4px 8px; font-family: var(--mono); font-size: 12px; color: var(--muted);
+    }
+    .composer-wrap { border-top: 1px solid var(--line); padding: 12px 16px 14px; }
+    .composer { width: min(860px, 100%); margin: 0 auto; }
+    #staging { display: flex; gap: 8px; overflow: auto; min-height: 0; margin-bottom: 8px; }
+    .box { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+    .box:focus-within { border-color: var(--accent); }
+    textarea { width: 100%; resize: none; border: 0; background: transparent; padding: 12px; outline: none; min-height: 64px; }
+    .actions { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 8px 8px; border-top: 1px solid rgba(31,36,45,.7); }
+    .fine { text-align: center; color: var(--faint); font-family: var(--mono); font-size: 11px; margin-top: 8px; }
+    .skill { display: flex; justify-content: space-between; gap: 8px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+    .skill small, .hint { color: var(--faint); font-size: 11px; }
+    .skill strong { font-size: 12px; }
+    label.slider { display: block; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    input.path { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px; color-scheme: dark; }
+    .err { color: var(--bad); font-size: 13px; }
+    .empty { color: var(--faint); padding: 28px 8px; }
+    .send { background: var(--accent); color: white; border: 0; border-radius: 12px; padding: 8px; }
+    .send:disabled { opacity: .45; cursor: default; }
+    .section-title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 700; }
+    .save { margin-top: 8px; background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+    @media (max-width: 900px) {
+      aside.nav { display: none; }
+      .meter.ctx { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <div class="brand"><span id="live-dot" class="dot"></span> <span id="brand">Mrs. Rayne</span></div>
+      <select id="model" class="model" title="Models installed for this app"></select>
+    </div>
+    <div class="right">
+      <div class="meter" id="vram">local</div>
+      <div class="meter ctx" id="ctx">CTX —</div>
+      <div class="tps" id="tps">— t/s</div>
+      <button class="icon-btn" id="toggle-inspector" title="Parameters">
+        <svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="nav" id="nav">
+      <div class="pad">
+        <button class="new" id="new-session">New session <span class="meta">local</span></button>
+        <button class="ghost" id="scan-models" type="button" style="width: 100%; margin-top: 8px;">Look for installed models</button>
+      </div>
+      <div class="kicker">Sessions</div>
+      <div class="sessions" id="sessions"></div>
+      <div class="foot">
+        <span>Ollama</span>
+        <span id="version" class="meta"></span>
+        <span id="host" class="meta">127.0.0.1:11434</span>
+      </div>
+    </aside>
+    <main>
+      <div id="thread"><div class="col" id="messages"></div></div>
+      <div class="composer-wrap">
+        <div class="composer">
+          <div id="staging"></div>
+          <div class="box">
+            <textarea id="prompt" rows="2" placeholder="Talk to Mrs. Milla Rayne."></textarea>
+            <div class="actions">
+              <div class="row">
+                <button class="icon-btn" id="attach" title="Put a text file on the desk">
+                  <svg viewBox="0 0 24 24"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.4-8.5"/></svg>
+                </button>
+                <input id="file" type="file" accept=".txt,.md,.csv,.json,.log,.py" hidden>
+              </div>
+              <div class="row">
+                <span class="meta" id="rough">Enter sends</span>
+                <button class="send" id="send" title="Enter sends. Shift+Enter adds a line.">
+                  <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="fine" id="fine">Enter sends. A session directory is a path you give her.</div>
+        </div>
+      </div>
+    </main>
+    <aside class="inspector" id="inspector">
+      <div class="section-title">This session</div>
+      <input id="work-path" class="path" placeholder="/path/to/directory">
+      <button class="ghost" id="set-work" type="button">Use this directory</button>
+      <div class="hint" id="work-note">Paste a directory. She looks there, not across the drive.</div>
+      <div class="section-title">Sampling</div>
+      <label class="slider">Temperature <span id="temp-val">0.70</span>
+        <input id="temp" type="range" min="0" max="2" step="0.05" value="0.7">
+      </label>
+      <label class="slider">Top-P <span id="top-p-val">0.90</span>
+        <input id="top-p" type="range" min="0" max="1" step="0.05" value="0.9">
+      </label>
+      <div class="section-title">Canvas</div>
+      <label class="skill">
+        <span><strong>Local file access</strong><br><small id="access-note">Off. Her workspace is already hers. Your files stay closed.</small></span>
+        <input id="file-access" type="checkbox">
+      </label>
+      <div class="skill">
+        <span><strong>Execution</strong><br><small>Off. Seeing a file is not permission to run it.</small></span>
+        <input type="checkbox" disabled>
+      </div>
+      <button class="new" id="download" type="button">Download this piece</button>
+      <div class="kicker">Added</div>
+      <div class="sessions" id="added"></div>
+      <div class="hint" id="files-note"></div>
+      <div class="hint" id="memory-note"></div>
+    </aside>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = { session: null, sending: false, scanAllowed: false, fileAccess: false };
+
+    function esc(text) {
+      return String(text || "").replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+    }
+
+    async function api(path, options) {
+      const res = await fetch(path, options);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "request failed");
+      return body;
+    }
+
+    function renderMessages() {
+      const col = $("messages");
+      const messages = (state.session && state.session.messages) || [];
+      if (!messages.length) {
+        col.innerHTML = '<div class="empty">No messages yet. The list on the right is what has been added.</div>';
+        return;
+      }
+      col.innerHTML = messages.map((msg, index) => {
+        if (msg.role === "user") {
+          return `<div class="user-wrap"><div class="meta">you</div><div class="bubble user"><pre>${esc(msg.content)}</pre></div></div>`;
+        }
+        return `<div class="asst-wrap"><div class="meta">${esc(msg.role_name || "Mrs. Rayne")}</div><div class="bubble assistant"><pre class="answer">${esc(msg.content)}</pre><button class="save" data-save="${index}">Save to desk</button></div></div>`;
+      }).join("");
+      col.querySelectorAll("[data-save]").forEach((btn) => {
+        btn.onclick = () => saveReply(messages[Number(btn.dataset.save)].content);
+      });
+      $("thread").scrollTop = $("thread").scrollHeight;
+    }
+
+    function renderSessions(rows) {
+      $("sessions").innerHTML = (rows || []).map((row) => `
+        <button class="sess ${state.session && state.session.id === row.id ? "active" : ""}" data-id="${row.id}">
+          <b>${esc(row.title)}</b><small>${esc(row.preview)}</small>
+        </button>`).join("");
+      $("sessions").querySelectorAll(".sess").forEach((btn) => {
+        btn.onclick = async () => {
+          state.session = await api("/api/sessions/" + btn.dataset.id);
+          renderMessages();
+          refresh();
+        };
+      });
+    }
+
+    function renderAdded(rows) {
+      $("added").innerHTML = (rows || []).slice().reverse().map((row) => `
+        <button class="sess" data-rel="${esc(row.relative)}"><b>${esc(row.relative)}</b><small>${esc(row.where)} · ${row.bytes} bytes</small></button>`).join("")
+        || '<div class="empty">Nothing added yet.</div>';
+      $("added").querySelectorAll(".sess").forEach((btn) => {
+        btn.onclick = async () => {
+          const file = await api("/api/file?rel=" + encodeURIComponent(btn.dataset.rel));
+          $("messages").insertAdjacentHTML("beforeend", `<div class="asst-wrap"><div class="meta">desk</div><div class="bubble assistant"><pre>${esc(file.content)}</pre></div></div>`);
+        };
+      });
+    }
+
+    async function refresh() {
+      const snapshot = await api("/api/state");
+      state.scanAllowed = snapshot.scan_allowed;
+      state.fileAccess = snapshot.file_access;
+      $("live-dot").classList.toggle("down", !snapshot.ollama_ok);
+      $("file-access").checked = snapshot.file_access;
+      $("access-note").textContent = snapshot.file_access
+        ? "On. Home directories are readable. rwx stays inside her workspace. System files stay closed."
+        : "Off. Home directories stay closed. rwx stays inside her workspace.";
+      const work = (state.session && state.session.work_path) || "";
+      if (document.activeElement !== $("work-path")) $("work-path").value = work;
+      $("work-note").textContent = work
+        ? "This session: " + work
+        : "Paste a directory. She looks there, not across the drive.";
+      $("memory-note").textContent = "Memory — canon " + snapshot.memory.canon + ", episodes " + snapshot.memory.episodes + ", reviews " + snapshot.memory.reviews + ".";
+      $("ctx").textContent = snapshot.models.length ? (snapshot.models.length + " models") : "CTX —";
+      const select = $("model");
+      const current = select.value;
+      if (document.activeElement !== select) {
+        select.innerHTML = snapshot.models.map((name) => {
+          const badge = name.toLowerCase().endsWith(":cloud") ? " (cloud)" : "";
+          return `<option value="${esc(name)}">${esc(name)}${badge}</option>`;
+        }).join("");
+        if (current) select.value = current;
+        if (!select.value && snapshot.suggested) select.value = snapshot.suggested;
+      }
+      $("version").textContent = snapshot.version ? "v" + snapshot.version : "";
+      if (snapshot.ollama_error) {
+        $("fine").textContent = snapshot.ollama_error;
+      } else if (!snapshot.scan_allowed) {
+        $("fine").textContent = "Allow a look at installed models before the list can fill.";
+      }
+      renderSessions(snapshot.sessions);
+      renderAdded(snapshot.additions);
+      return snapshot;
+    }
+
+    async function saveReply(content) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const row = await api("/api/place", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "replies/reply-" + stamp + ".txt", content })
+      });
+      $("fine").textContent = "Saved " + row.relative + ". Download this piece when you want the file.";
+      refresh();
+    }
+
+    $("temp").oninput = () => { $("temp-val").textContent = Number($("temp").value).toFixed(2); };
+    $("top-p").oninput = () => { $("top-p-val").textContent = Number($("top-p").value).toFixed(2); };
+    $("toggle-inspector").onclick = () => $("inspector").classList.toggle("hidden");
+    $("download").onclick = () => { window.location = "/api/download.zip"; };
+    $("new-session").onclick = async () => {
+      state.session = await api("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: $("model").value })
+      });
+      renderMessages();
+      refresh();
+    };
+    $("file-access").onchange = async () => {
+      await api("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_access: $("file-access").checked })
+      });
+      refresh();
+    };
+    $("scan-models").onclick = async () => {
+      await api("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scan_allowed: true })
+      });
+      refresh();
+    };
+    $("set-work").onclick = async () => {
+      if (!state.session) {
+        state.session = await api("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: $("model").value })
+        });
+      }
+      try {
+        state.session = await api("/api/session-work", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: state.session.id, path: $("work-path").value.trim() })
+        });
+        $("fine").textContent = state.session.work_path
+          ? "This session is " + state.session.work_path
+          : "Session directory cleared.";
+        refresh();
+      } catch (err) {
+        $("fine").textContent = err.message;
+      }
+    };
+    $("attach").onclick = () => $("file").click();
+    $("file").onchange = async () => {
+      const file = $("file").files[0];
+      if (!file) return;
+      const content = await file.text();
+      const row = await api("/api/place", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "notes/" + file.name, content })
+      });
+      $("staging").insertAdjacentHTML("beforeend", `<span class="stage">${esc(row.relative)}</span>`);
+      refresh();
+    };
+
+    $("prompt").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+      event.preventDefault();
+      $("send").click();
+    });
+    $("send").onclick = async () => {
+      const text = $("prompt").value.trim();
+      if (!text || state.sending) return;
+      if (!state.scanAllowed) {
+        await api("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scan_allowed: true, file_access: state.fileAccess })
+        });
+      }
+      state.sending = true;
+      $("send").disabled = true;
+      $("prompt").value = "";
+      if (!state.session) {
+        state.session = await api("/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: $("model").value })
+        });
+      }
+      state.session.messages.push({ role: "user", content: text });
+      state.session.messages.push({ role: "assistant", content: "", role_name: "Mrs. Rayne" });
+      renderMessages();
+      const started = performance.now();
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text,
+            model: $("model").value,
+            session_id: state.session.id,
+            temperature: Number($("temp").value),
+            top_p: Number($("top-p").value)
+          })
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let acc = "";
+        let usedLookup = false;
+        while (true) {
+          const step = await reader.read();
+          if (step.done) break;
+          buffer += decoder.decode(step.value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const row = JSON.parse(line);
+            if (row.error) throw new Error(row.error);
+            if (row.lookup) usedLookup = true;
+            if (row.token) {
+              acc += row.token;
+              state.session.messages[state.session.messages.length - 1].content = acc;
+              renderMessages();
+            }
+            if (row.done) state.session = row.session;
+          }
+        }
+        const seconds = (performance.now() - started) / 1000;
+        $("tps").textContent = Math.round(acc.length / 4 / Math.max(seconds, 0.1)) + " t/s";
+        const onCloud = ($("model").value || "").toLowerCase().endsWith(":cloud");
+        if (onCloud && usedLookup) {
+          $("fine").textContent = "Reply ran on a cloud model, with text fetched from the web at your ask. It did not stay on this machine.";
+        } else if (onCloud) {
+          $("fine").textContent = "Reply ran on a cloud model. It did not stay on this machine.";
+        } else if (usedLookup) {
+          $("fine").textContent = "Reply stayed on this machine. The web text in it was fetched at your ask.";
+        } else {
+          $("fine").textContent = "Reply stayed on this machine.";
+        }
+        refresh();
+      } catch (err) {
+        $("fine").textContent = err.message;
+      } finally {
+        state.sending = false;
+        $("send").disabled = false;
+      }
+    };
+
+    refresh().then(renderMessages);
+    setInterval(() => { if (!state.sending) refresh(); }, 2000);
+  </script>
+</body>
+</html>

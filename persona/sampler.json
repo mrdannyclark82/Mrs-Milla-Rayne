@@ -1,0 +1,6 @@
+{
+  "companion": {"temperature": 0.7, "top_p": 0.9, "num_ctx": 8192},
+  "code": {"temperature": 0.4, "top_p": 0.9, "num_ctx": 8192},
+  "vision": {"temperature": 0.2, "top_p": 0.9, "num_ctx": 4096},
+  "embed": {"temperature": 0.0, "top_p": 1.0, "num_ctx": 512}
+}
