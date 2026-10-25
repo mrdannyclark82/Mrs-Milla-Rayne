@@ -9,10 +9,8 @@ This folder is the app. It dresses a model that is already installed. It does no
 ## What is in this repository
 
 - The app — `mrs_public/`, `persona/`, and `tests/` — version 1.0.0, described below.
-- `cabin/` — the earlier scene-demo showcase, kept so the Pages site keeps working.
-- `merch-social/` — the campaign assets.
 
-Until 2026-10-25 this repository held a prototype showcase whose README claimed a fully offline stack with voice, vision, and vector memory. That was not true of the shipped app, so the prototype was replaced by the build above; it remains in the git history. We only ship the truth.
+The cabin demo, the social campaign, and the merch are not in this tree.
 
 ## What happens when the app opens
 
