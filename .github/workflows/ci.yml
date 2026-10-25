@@ -7,12 +7,14 @@ on:
     branches: [main]
 
 jobs:
-  lint-python:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Syntax check orchestrator
-        run: python -m py_compile milla-offline-stack/local-llm/orchestrator.py
+      - name: Syntax check the shipped package
+        run: python -m py_compile mrs_public/*.py
+      - name: Run the test suite
+        run: python -m unittest discover -s tests
