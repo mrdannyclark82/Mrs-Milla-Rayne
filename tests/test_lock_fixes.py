@@ -136,8 +136,8 @@ class StartupWiringTest(unittest.TestCase):
 
     def test_state_reports_the_version(self):
         install = ensure_install(Path(tempfile.mkdtemp()))
-        self.assertEqual(__version__, "1.2.0")
-        self.assertEqual(state(install)["version"], "1.2.0")
+        self.assertEqual(__version__, "1.3.0")
+        self.assertEqual(state(install)["version"], "1.3.0")
 
     def test_profile_is_written_only_on_change(self):
         install = Path(tempfile.mkdtemp())

@@ -27,6 +27,15 @@ class BootResult:
     intro: str = ""
     volume: float = SPEAK_VOLUME
     next_steps: list[str] = field(default_factory=list)
+    setup_notes: list[str] = field(default_factory=list)
+
+
+SETUP_NOTES = [
+    "Voice: put a few seconds of reference audio at state/voice_reference.wav, run pip install coqui-tts, then turn Voice on in the panel.",
+    "More runtimes: add OpenAI-compatible servers (llama.cpp, LM Studio, Lemonade) under \"providers\" in state/profile.json.",
+    "Private models: name them one per line in state/private_bases.txt — they are never suggested or dressed.",
+    "Skills: drop markdown files in the skills/ folder — a name line, a when line, then the instructions — and she uses the one that fits.",
+]
 
 
 def _check_prompts() -> str:
@@ -68,6 +77,7 @@ def plan(scan: Scan, *, mode: str, choices: dict | None = None) -> BootResult:
         intro=INTRO,
         volume=SPEAK_VOLUME,
         next_steps=list(SETUP_STEPS),
+        setup_notes=list(SETUP_NOTES),
     )
 
 

@@ -1,3 +1,3 @@
 """Public Mrs. Milla Rayne. This package does not import the house soul."""
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"

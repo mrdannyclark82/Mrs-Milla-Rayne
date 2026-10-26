@@ -203,6 +203,9 @@
       <div class="sessions" id="added"></div>
       <div class="hint" id="files-note"></div>
       <div class="hint" id="memory-note"></div>
+      <div class="hint" id="skills-note"></div>
+      <button class="ghost" id="memory-look" type="button">Look at her memory</button>
+      <div class="hint" id="memory-view" hidden></div>
     </aside>
   </div>
   <script>
@@ -308,6 +311,9 @@
         ? "This session: " + work
         : "Paste a directory. She looks there, not across the drive.";
       $("memory-note").textContent = "Memory — canon " + snapshot.memory.canon + ", episodes " + snapshot.memory.episodes + ", reviews " + snapshot.memory.reviews + ".";
+      $("skills-note").textContent = snapshot.skills && snapshot.skills.length
+        ? "Skills — " + snapshot.skills.join(", ") + "."
+        : "Skills — none installed. Add markdown files to her skills folder.";
       $("ctx").textContent = snapshot.models.length ? (snapshot.models.length + " models") : "CTX —";
       const select = $("model");
       const current = select.value;
@@ -371,6 +377,21 @@
         body: JSON.stringify({ file_access: $("file-access").checked })
       });
       refresh();
+    };
+    $("memory-look").onclick = async () => {
+      const view = $("memory-view");
+      if (!view.hidden) { view.hidden = true; return; }
+      const data = await api("/api/memory");
+      const lines = ["Canon:"];
+      (data.canon || []).forEach((row) => lines.push("• " + (row.text || "")));
+      lines.push("Recent episodes:");
+      (data.episodes || []).forEach((row) => lines.push("• " + (row.text || "")));
+      if ((data.reviews || []).length) {
+        lines.push("Reviews:");
+        data.reviews.forEach((row) => lines.push("• " + (row.text || row.kind || "review")));
+      }
+      view.innerHTML = lines.map((line) => `<div>${esc(line)}</div>`).join("");
+      view.hidden = false;
     };
     $("voice-on").onchange = async () => {
       await api("/api/profile", {
@@ -515,6 +536,7 @@
         let usedModel = "";
         let usedLocal = true;
         let usedProvider = "";
+        let usedSkill = "";
         while (true) {
           const step = await reader.read();
           if (step.done) break;
@@ -531,7 +553,7 @@
               state.session.messages[state.session.messages.length - 1].content = acc;
               renderMessages();
             }
-            if (row.done) { state.session = row.session; usedVision = !!row.vision; usedModel = row.model || ""; usedLocal = row.local !== false; usedProvider = row.provider || ""; }
+            if (row.done) { state.session = row.session; usedVision = !!row.vision; usedModel = row.model || ""; usedLocal = row.local !== false; usedProvider = row.provider || ""; usedSkill = row.skill || ""; }
           }
         }
         const seconds = (performance.now() - started) / 1000;
@@ -550,6 +572,7 @@
         } else {
           $("fine").textContent = "Reply stayed on this machine.";
         }
+        if (usedSkill) $("fine").textContent += " Skill used: " + usedSkill + ".";
         refresh();
       } catch (err) {
         $("fine").textContent = err.message;

@@ -24,6 +24,7 @@ from .scan import scan_openai
 from .names import PRODUCT
 from .recall import ensure_roots, learn_history
 from .review import on_open
+from .skills import load_skills
 from .voice import synthesize_reply, voice_status
 
 PAGE = Path(__file__).with_name("studio_page.html")
@@ -43,6 +44,7 @@ def ensure_install(install: Path) -> Path:
     workspace = install / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
     (install / "state").mkdir(parents=True, exist_ok=True)
+    (install / "skills").mkdir(parents=True, exist_ok=True)
     Memory(install)
     profile_path = install / "state" / "profile.json"
     if not profile_path.exists():
@@ -111,6 +113,19 @@ def update_profile(install: Path, patch: dict) -> dict:
     if "voice_enabled" in patch:
         profile["voice_enabled"] = bool(patch["voice_enabled"])
     return save_profile(install, profile)
+
+
+def memory_view(install: Path) -> dict:
+    """What she has learned, readable: canon in full, the newest
+    episodes and reviews. Read-only — this window changes nothing."""
+    memory = Memory(install)
+    episodes = memory.read("episodes")
+    reviews = memory.read("reviews")
+    return {
+        "canon": memory.read("canon"),
+        "episodes": list(reversed(episodes[-20:])),
+        "reviews": list(reversed(reviews[-5:])),
+    }
 
 
 def desk_files(install: Path) -> list[dict]:
@@ -191,6 +206,7 @@ def state(install: Path, scan_opener=None) -> dict:
         "provider_models": provider_models,
         "voice_enabled": bool(profile.get("voice_enabled")),
         "voice": voice_status(install),
+        "skills": [skill.name for skill in load_skills(install)],
         "suggested": (suggest(models).get("companion") if models else "") or "",
         "vision_model": (suggest(models).get("vision") if models else "") or "",
         "sessions": list_sessions(install),
@@ -239,6 +255,9 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None, voice_engine
                     return
                 if parsed.path == "/api/state":
                     self._json(200, state(root, scan_opener))
+                    return
+                if parsed.path == "/api/memory":
+                    self._json(200, memory_view(root))
                     return
                 if parsed.path.startswith("/api/sessions/"):
                     self._json(200, load_session(root, parsed.path.rsplit("/", 1)[-1]))

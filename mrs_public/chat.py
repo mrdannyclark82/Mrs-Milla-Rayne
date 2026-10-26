@@ -21,6 +21,7 @@ from .lookup import Resolver, fence, fetch_page, search_web
 from .lookup import enabled as web_enabled
 from .providers import Provider
 from .scan import Scan, scan_ollama
+from .skills import load_skills, pick_skill
 
 WORK_RE = re.compile(r"\bwork in\s+(\S+)", re.I)
 URL_RE = re.compile(r"https?://[^\s<>\"')\]]+", re.I)
@@ -341,6 +342,15 @@ def stream_chat(
     extra = context_block(install, work_path=session.get("work_path") or "")
     if extra:
         system = f"{system}\n\n{extra}".strip() if system else extra
+    # One skill may ride a text turn: know-how the install taught her,
+    # named in the done event so the page can say it was used. Vision
+    # turns keep their own prompt, untouched.
+    skill = None
+    if image_b64 is None:
+        skill = pick_skill(load_skills(install), text)
+        if skill is not None:
+            block = f"Skill in use: {skill.name}\n{skill.body}"
+            system = f"{system}\n\n{block}".strip() if system else block
     # The transcript keeps a placeholder, never the image bytes: session
     # files stay small, and a picture is not quietly archived as data.
     stored_text = text
@@ -427,4 +437,5 @@ def stream_chat(
         "vision": image_b64 is not None,
         "provider": transport.label,
         "local": transport.local,
+        "skill": skill.name if skill is not None else "",
     }

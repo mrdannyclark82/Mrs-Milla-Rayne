@@ -8,7 +8,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 ## What is in this repository
 
-- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.2.0, described below.
+- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.3.0, described below.
 
 
 ## What happens when the app opens
@@ -36,6 +36,21 @@ Ollama is built in. The install may also name OpenAI-compatible servers — llam
 ```
 
 After a scan, those models join the picker under the provider's name. A reply from an endpoint that is not on this machine is reported as exactly that — it is never called local. Vision turns stay on this machine regardless: an attached image is only ever answered by the local vision model.
+
+## Memory
+
+Three piles — canon, episodes, reviews — all plain files in the install's state folder. The panel's "Look at her memory" button shows them in the window too: canon in full, the newest episodes and reviews. Read-only — looking changes nothing.
+
+## Skills
+
+The install can teach her know-how: markdown files in the install's `skills/` folder. Each skill is a name line, a "when" line, then the instructions:
+
+    name: Meal Planner
+    when: meal plan, recipe, grocery list
+
+    <the instructions>
+
+When a message matches a skill's "when" phrases, that skill's instructions ride along with the turn — at most one skill per turn — and the page reports its name: "Skill used: Meal Planner." Skills are instructions, never powers: a skill cannot run anything, open anything, or grant anything. This repository ships no skills; the folder belongs to the install.
 
 ## Voice
 
