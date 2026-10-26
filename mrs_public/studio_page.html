@@ -146,6 +146,8 @@
       <div class="composer-wrap">
         <div class="composer">
           <div id="staging"></div>
+          <div id="image-stage" style="display: flex; gap: 8px; margin-bottom: 8px;"></div>
+          <div class="hint" id="vision-note" style="margin-bottom: 8px;" hidden>Vision is off — no local vision model is installed, so she cannot look at images yet.</div>
           <div class="box">
             <textarea id="prompt" rows="2" placeholder="Talk to Mrs. Milla Rayne."></textarea>
             <div class="actions">
@@ -154,6 +156,10 @@
                   <svg viewBox="0 0 24 24"><path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.4-8.5"/></svg>
                 </button>
                 <input id="file" type="file" accept=".txt,.md,.csv,.json,.log,.py" hidden>
+                <button class="icon-btn" id="attach-image" title="Show her an image" hidden>
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+                </button>
+                <input id="image-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
               </div>
               <div class="row">
                 <span class="meta" id="rough">Enter sends</span>
@@ -197,7 +203,7 @@
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
-    const state = { session: null, sending: false, scanAllowed: false, fileAccess: false };
+    const state = { session: null, sending: false, scanAllowed: false, fileAccess: false, image: null, visionModel: "" };
 
     function esc(text) {
       return String(text || "").replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
@@ -274,14 +280,24 @@
       const select = $("model");
       const current = select.value;
       if (document.activeElement !== select) {
-        select.innerHTML = snapshot.models.map((name) => {
+        const ollamaOpts = snapshot.models.map((name) => {
           const badge = name.toLowerCase().endsWith(":cloud") ? " (cloud)" : "";
           return `<option value="${esc(name)}">${esc(name)}${badge}</option>`;
         }).join("");
+        const providerGroups = (snapshot.provider_models || []).map((prov) => {
+          const opts = (prov.models || []).map((name) => `<option value="p:${esc(prov.id)}:${esc(name)}">${esc(name)}</option>`).join("");
+          return opts ? `<optgroup label="${esc(prov.label)}">${opts}</optgroup>` : "";
+        }).join("");
+        select.innerHTML = providerGroups
+          ? `<optgroup label="Ollama">${ollamaOpts}</optgroup>` + providerGroups
+          : ollamaOpts;
         if (current) select.value = current;
         if (!select.value && snapshot.suggested) select.value = snapshot.suggested;
       }
       $("version").textContent = snapshot.version ? "v" + snapshot.version : "";
+      state.visionModel = snapshot.vision_model || "";
+      $("attach-image").hidden = !state.visionModel;
+      $("vision-note").hidden = !!state.visionModel;
       if (snapshot.ollama_error) {
         $("fine").textContent = snapshot.ollama_error;
       } else if (!snapshot.scan_allowed) {
@@ -368,6 +384,33 @@
       refresh();
     };
 
+    function renderImageChip() {
+      const box = $("image-stage");
+      if (!state.image) { box.innerHTML = ""; return; }
+      box.innerHTML = `<span class="stage">${esc(state.image.name)} · image <button class="icon-btn" id="image-clear" title="Remove the image">×</button></span>`;
+      $("image-clear").onclick = () => { state.image = null; renderImageChip(); };
+    }
+    $("attach-image").onclick = () => $("image-file").click();
+    $("image-file").onchange = () => {
+      const file = $("image-file").files[0];
+      $("image-file").value = "";
+      if (!file) return;
+      if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)) {
+        $("fine").textContent = "That image type is not one she can look at. Use a PNG, JPEG, WebP, or GIF.";
+        return;
+      }
+      if (file.size > 10000000) {
+        $("fine").textContent = "That image is too large for her to look at. Keep it under 10 MB.";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        state.image = { type: file.type, data: String(reader.result).split(",")[1] || "", name: file.name };
+        renderImageChip();
+      };
+      reader.readAsDataURL(file);
+    };
+
     $("prompt").addEventListener("keydown", (event) => {
       if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
       event.preventDefault();
@@ -375,7 +418,7 @@
     });
     $("send").onclick = async () => {
       const text = $("prompt").value.trim();
-      if (!text || state.sending) return;
+      if ((!text && !state.image) || state.sending) return;
       if (!state.scanAllowed) {
         await api("/api/profile", {
           method: "POST",
@@ -393,20 +436,34 @@
           body: JSON.stringify({ model: $("model").value })
         });
       }
-      state.session.messages.push({ role: "user", content: text });
+      const image = state.image;
+      state.image = null;
+      renderImageChip();
+      state.session.messages.push({ role: "user", content: image ? (text ? text + " [image]" : "[image]") : text });
       state.session.messages.push({ role: "assistant", content: "", role_name: "Mrs. Rayne" });
       renderMessages();
       const started = performance.now();
       try {
+        const rawModel = $("model").value || "";
+        let modelName = rawModel;
+        let providerId = "";
+        if (rawModel.startsWith("p:")) {
+          const rest = rawModel.slice(2);
+          const cut = rest.indexOf(":");
+          providerId = rest.slice(0, cut);
+          modelName = rest.slice(cut + 1);
+        }
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             text,
-            model: $("model").value,
+            model: modelName,
+            provider: providerId || undefined,
             session_id: state.session.id,
             temperature: Number($("temp").value),
-            top_p: Number($("top-p").value)
+            top_p: Number($("top-p").value),
+            image: image || undefined
           })
         });
         const reader = res.body.getReader();
@@ -414,6 +471,10 @@
         let buffer = "";
         let acc = "";
         let usedLookup = false;
+        let usedVision = false;
+        let usedModel = "";
+        let usedLocal = true;
+        let usedProvider = "";
         while (true) {
           const step = await reader.read();
           if (step.done) break;
@@ -430,13 +491,17 @@
               state.session.messages[state.session.messages.length - 1].content = acc;
               renderMessages();
             }
-            if (row.done) state.session = row.session;
+            if (row.done) { state.session = row.session; usedVision = !!row.vision; usedModel = row.model || ""; usedLocal = row.local !== false; usedProvider = row.provider || ""; }
           }
         }
         const seconds = (performance.now() - started) / 1000;
         $("tps").textContent = Math.round(acc.length / 4 / Math.max(seconds, 0.1)) + " t/s";
         const onCloud = ($("model").value || "").toLowerCase().endsWith(":cloud");
-        if (onCloud && usedLookup) {
+        if (usedVision) {
+          $("fine").textContent = "Reply stayed on this machine. The local vision model (" + usedModel + ") did the looking.";
+        } else if (!usedLocal) {
+          $("fine").textContent = "Reply ran on " + (usedProvider || "another provider") + ", off this machine.";
+        } else if (onCloud && usedLookup) {
           $("fine").textContent = "Reply ran on a cloud model, with text fetched from the web at your ask. It did not stay on this machine.";
         } else if (onCloud) {
           $("fine").textContent = "Reply ran on a cloud model. It did not stay on this machine.";

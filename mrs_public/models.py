@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from .names import CODER_HINTS, EMBED_HINTS, HOUSE_BASES, VISION_HINTS
 
 
@@ -9,8 +12,28 @@ def base_name(tag: str) -> str:
     return (tag or "").strip().lower().split(":", 1)[0]
 
 
+def _private_bases_file() -> Path:
+    override = os.environ.get("MRS_PUBLIC_PRIVATE_BASES")
+    if override:
+        return Path(override)
+    return Path.home() / ".mrs-milla-rayne" / "state" / "private_bases.txt"
+
+
+def _install_private_bases() -> frozenset[str]:
+    """Base names the install calls private, one per line, from its own file.
+
+    Same discipline as the guard terms: the shipped build carries no house
+    list of its own; the install names its weights and they stay home.
+    """
+    try:
+        lines = _private_bases_file().read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return frozenset()
+    return frozenset(base_name(line) for line in lines if line.strip())
+
+
 def is_house(tag: str) -> bool:
-    return base_name(tag) in HOUSE_BASES
+    return base_name(tag) in HOUSE_BASES or base_name(tag) in _install_private_bases()
 
 
 def is_cloud(tag: str) -> bool:

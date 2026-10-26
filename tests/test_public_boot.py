@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,9 +38,9 @@ def _opener(payload):
 
 
 HOUSE = [
-    "milla-rayne:latest",
-    "mrdannyclark82/milla-rayne:latest",
-    "devmilla:latest",
+    "house-rayne:latest",
+    "example/house-rayne:latest",
+    "devhouse:latest",
     "qwen2.5-coder:7b",
     "gemma2:2b",
     "moondream:latest",
@@ -48,6 +49,20 @@ HOUSE = [
 
 
 class PublicBootTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._bases = Path(tempfile.mkdtemp()) / "private_bases.txt"
+        cls._bases.write_text("house-rayne\nexample/house-rayne\ndevhouse\n", encoding="utf-8")
+        cls._old_env = os.environ.get("MRS_PUBLIC_PRIVATE_BASES")
+        os.environ["MRS_PUBLIC_PRIVATE_BASES"] = str(cls._bases)
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls._old_env is None:
+            os.environ.pop("MRS_PUBLIC_PRIVATE_BASES", None)
+        else:
+            os.environ["MRS_PUBLIC_PRIVATE_BASES"] = cls._old_env
+
     def test_prompts_have_no_private_words(self):
         for role in ("companion", "code", "vision"):
             self.assertEqual(leaks(read_prompt(role)), [])
@@ -88,7 +103,7 @@ class PublicBootTest(unittest.TestCase):
         result = first_boot(
             Path(tempfile.mkdtemp()),
             permission=True,
-            opener=_opener({"models": [{"name": "milla-rayne:latest"}, {"name": "devmilla:latest"}]}),
+            opener=_opener({"models": [{"name": "house-rayne:latest"}, {"name": "devhouse:latest"}]}),
         )
         self.assertFalse(result.ok)
         self.assertIn("House weights", result.reason)
@@ -113,7 +128,7 @@ class PublicBootTest(unittest.TestCase):
         self.assertTrue(companion.startswith("FROM gemma2:2b\n"))
         self.assertIn("Mrs. Milla Rayne", companion)
         self.assertIn("dedicated daily driver", companion)
-        self.assertNotIn("FROM milla-rayne", companion)
+        self.assertNotIn("FROM house-rayne", companion)
         code = (dest / "persona" / "code.Modelfile").read_text(encoding="utf-8")
         self.assertTrue(code.startswith("FROM qwen2.5-coder:7b\n"))
         self.assertIn("dedicated daily driver", code)

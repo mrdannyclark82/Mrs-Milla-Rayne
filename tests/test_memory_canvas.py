@@ -80,12 +80,12 @@ class MemoryCanvasTest(unittest.TestCase):
         install = Path(tempfile.mkdtemp())
         memory = Memory(install)
         memory.add("episodes", text="Hello Mrs. Rayne", outcome="said")
-        memory.add("episodes", text="Very nice to meet you. My name is Danny Clark.", outcome="said")
+        memory.add("episodes", text="Very nice to meet you. My name is Jordan Ellis.", outcome="said")
         memory.add("episodes", text="ok you have been granted local file access to my system.", outcome="said")
         learn_history(install)
         learn_history(install)
         texts = [row["text"] for row in memory.read("canon")]
-        self.assertEqual(texts, ["The user's name is Danny Clark."])
+        self.assertEqual(texts, ["The user's name is Jordan Ellis."])
         profile_path = install / "state" / "profile.json"
         if profile_path.exists():
             self.assertFalse(json.loads(profile_path.read_text(encoding="utf-8")).get("file_access"))
@@ -95,7 +95,7 @@ class MemoryCanvasTest(unittest.TestCase):
         profile["user_root"] = str(user)
         profile_path.write_text(json.dumps(profile), encoding="utf-8")
         block = context_block(install, work_path=str(user))
-        self.assertIn("Danny Clark", block)
+        self.assertIn("Jordan Ellis", block)
         self.assertIn("Her workspace is always available", block)
         self.assertIn("Projects", block)
         self.assertIn("Directory already read", block)

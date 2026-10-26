@@ -43,3 +43,32 @@ def scan_ollama(
     if not names:
         return Scan(False, "ollama", (), "Ollama is up and has no models installed.")
     return Scan(True, "ollama", tuple(names), "")
+
+
+def scan_openai(
+    url: str,
+    *,
+    permission: bool,
+    opener: Callable[..., object] | None = None,
+    timeout: float = 3,
+) -> Scan:
+    """Models on an OpenAI-compatible server (llama.cpp, LM Studio, Lemonade)."""
+    if not permission:
+        return Scan(False, "openai", (), "Need permission before I look at installed models.")
+    fetch = opener or urlopen
+    target = url.rstrip("/") + "/models"
+    try:
+        with fetch(target, timeout=timeout) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except URLError as exc:
+        return Scan(False, "openai", (), f"No answer at {url}. {exc.reason}")
+    except Exception as exc:  # noqa: BLE001 — the page must say what failed
+        return Scan(False, "openai", (), f"No answer at {url}. {type(exc).__name__}: {exc}")
+    names = []
+    for raw in payload.get("data") or []:
+        name = raw.get("id") if isinstance(raw, dict) else None
+        if name:
+            names.append(str(name))
+    if not names:
+        return Scan(False, "openai", (), f"The server at {url} is up and lists no models.")
+    return Scan(True, "openai", tuple(names), "")

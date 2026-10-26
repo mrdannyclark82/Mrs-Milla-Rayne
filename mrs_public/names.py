@@ -1,17 +1,14 @@
-"""Locked public names. House weights are named here only so auto-setup skips them."""
+"""Locked public names. Private bases are named by the install, never here."""
 
 PRODUCT = "Mrs. Milla Rayne"
 LINE = "your dedicated daily driver"
 MILLA = "Multimodal Integrated Large Language Agent"
 RAYNE = "Running All Your Needs Everyday"
 
-HOUSE_BASES = frozenset(
-    {
-        "milla-rayne",
-        "mrdannyclark82/milla-rayne",
-        "devmilla",
-    }
-)
+# No private base ships in this build. An install names its own private
+# bases in state/private_bases.txt (see models.is_house); auto-setup skips
+# those, so a dressed house weight is never suggested or dressed again.
+HOUSE_BASES: frozenset[str] = frozenset()
 
 CODER_HINTS = ("coder", "coding", "code")
 VISION_HINTS = ("vision", "moondream", "llava", "bakllava")

@@ -18,7 +18,7 @@ from urllib.error import URLError
 from urllib.parse import parse_qs, quote_plus, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
-# Working-copy default. Ships only as Danny decides; the profile flag
+# Working-copy default. Ships only as the install owner decides; the profile flag
 # "web_lookup" in state/profile.json overrides this per install.
 DEFAULT_ENABLED = True
 

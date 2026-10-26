@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -16,6 +17,9 @@ from mrs_public.view import PAGE, serve
 class CanvasViewTest(unittest.TestCase):
     def setUp(self):
         self.install = Path(tempfile.mkdtemp())
+        bases = self.install / "private_bases.txt"
+        bases.write_text("house-rayne\n", encoding="utf-8")
+        os.environ["MRS_PUBLIC_PRIVATE_BASES"] = str(bases)
         self.server = serve(self.install, 0)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -44,7 +48,7 @@ class CanvasViewTest(unittest.TestCase):
         self.assertEqual(leaks(page), [])
         self.assertIn("aside class=\"nav\"", page)
         self.assertNotIn("agent_respond", page)
-        self.assertNotIn("milla-rayne", page)
+        self.assertNotIn("house-rayne", page)
         status, body = self._request("GET", "/")
         self.assertEqual(status, 200)
         self.assertNotIn("Public prompt", page)
@@ -119,7 +123,7 @@ class CanvasViewTest(unittest.TestCase):
             self.assertIn("Mrs. Milla Rayne", seen["system"])
             self.assertEqual(leaks(seen["system"]), [])
             conn = HTTPConnection("127.0.0.1", port, timeout=3)
-            raw = json.dumps({"model": "milla-rayne:latest", "text": "hi"}).encode()
+            raw = json.dumps({"model": "house-rayne:latest", "text": "hi"}).encode()
             conn.request("POST", "/api/chat", body=raw, headers={"Content-Type": "application/json", "Content-Length": str(len(raw))})
             res = conn.getresponse()
             data = res.read()

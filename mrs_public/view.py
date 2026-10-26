@@ -18,7 +18,9 @@ from .canvas import additions, download_desk, place, read_home
 from .chat import create_session, list_sessions, load_session, save_session, stream_chat, visible_models
 from .guard import leaks
 from .memory import Memory, PILES
-from .models import suggest
+from .models import public_tags, suggest
+from .providers import find_provider, load_providers
+from .scan import scan_openai
 from .names import PRODUCT
 from .recall import ensure_roots, learn_history
 from .review import on_open
@@ -27,6 +29,7 @@ PAGE = Path(__file__).with_name("studio_page.html")
 HOST = "127.0.0.1"
 PORT = 8790
 MAX_BODY = 1_000_000
+CHAT_MAX_BODY = 16_000_000  # a chat turn may carry one image (10 MB as base64)
 
 
 def default_install() -> Path:
@@ -101,6 +104,8 @@ def update_profile(install: Path, patch: dict) -> dict:
             profile["user_root"] = str(Path.home())
     if "scan_allowed" in patch:
         profile["scan_allowed"] = bool(patch["scan_allowed"])
+    if "providers" in patch:
+        profile["providers"] = patch["providers"]
     return save_profile(install, profile)
 
 
@@ -149,6 +154,24 @@ def state(install: Path, scan_opener=None) -> dict:
         models = list(scan.models)
         ollama_ok = scan.ok
         ollama_error = scan.reason
+    provider_models: list[dict] = []
+    if profile.get("scan_allowed"):
+        for provider in load_providers(profile):
+            if provider.kind == "ollama":
+                continue
+            pscan = scan_openai(provider.url, permission=True, opener=scan_opener)
+            provider_models.append(
+                {
+                    "id": provider.id,
+                    "label": provider.label,
+                    "kind": provider.kind,
+                    "url": provider.url,
+                    "local": provider.local,
+                    "ok": pscan.ok,
+                    "error": pscan.reason,
+                    "models": list(public_tags(list(pscan.models))) if pscan.ok else [],
+                }
+            )
     return {
         "product": PRODUCT,
         "version": __version__,
@@ -161,7 +184,9 @@ def state(install: Path, scan_opener=None) -> dict:
         "ollama_ok": ollama_ok,
         "ollama_error": ollama_error,
         "models": models,
+        "provider_models": provider_models,
         "suggested": (suggest(models).get("companion") if models else "") or "",
+        "vision_model": (suggest(models).get("vision") if models else "") or "",
         "sessions": list_sessions(install),
         "additions": additions(install),
         "files": desk_files(install),
@@ -191,9 +216,9 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
         def _json(self, code: int, payload: dict) -> None:
             self._send(code, json.dumps(payload).encode("utf-8"), "application/json")
 
-        def _read_json(self) -> dict:
+        def _read_json(self, limit: int = MAX_BODY) -> dict:
             length = int(self.headers.get("Content-Length") or 0)
-            if length > MAX_BODY:
+            if length > limit:
                 raise ValueError("that file is too large for the desk")
             raw = self.rfile.read(length) if length else b""
             if not raw:
@@ -250,7 +275,7 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
         def do_POST(self) -> None:
             parsed = urlparse(self.path)
             try:
-                body = self._read_json()
+                body = self._read_json(CHAT_MAX_BODY if parsed.path == "/api/chat" else MAX_BODY)
             except (ValueError, json.JSONDecodeError) as exc:
                 self._json(400, {"error": str(exc)})
                 return
@@ -294,6 +319,12 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
         def _chat(self, body: dict) -> None:
             profile = load_profile(root)
             try:
+                provider = None
+                provider_id = str(body.get("provider") or "")
+                if provider_id and provider_id != "ollama":
+                    provider = find_provider(profile, provider_id)
+                    if provider is None:
+                        raise ValueError(f"Unknown provider: {provider_id}")
                 chunks = stream_chat(
                     root,
                     text=str(body.get("text") or ""),
@@ -303,7 +334,10 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
                     top_p=float(body.get("top_p") or 0.9),
                     use_prompt=bool(body.get("use_prompt", True)),
                     file_access=bool(profile.get("file_access")),
+                    image=body.get("image"),
+                    scan_opener=scan_opener,
                     opener=chat_opener,
+                    provider=provider,
                 )
                 first = next(chunks)
             except ValueError as exc:

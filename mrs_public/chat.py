@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import uuid
@@ -13,17 +14,58 @@ from urllib.request import Request, urlopen
 from .bounds import accept_directory
 from .cortex import choose
 from .memory import Memory
-from .models import is_house, public_tags
+from .models import is_house, public_tags, suggest
 from .pack import read_prompt, sampler
 from .recall import context_block, ensure_roots, learn, turn_note
 from .lookup import Resolver, fence, fetch_page, search_web
 from .lookup import enabled as web_enabled
+from .providers import Provider
 from .scan import Scan, scan_ollama
 
 WORK_RE = re.compile(r"\bwork in\s+(\S+)", re.I)
 URL_RE = re.compile(r"https?://[^\s<>\"')\]]+", re.I)
 LOOKUP_RE = re.compile(r"\b(?:look up|look it up|search the web|search online|web search|google)\b", re.I)
 READ_RE = re.compile(r"\b(?:read|open|fetch|summari[sz]e|check)\b", re.I)
+
+IMAGE_TYPES = ("image/png", "image/jpeg", "image/webp", "image/gif")
+MAX_IMAGE_BYTES = 10_000_000
+
+
+def _sniff_image(raw: bytes) -> str | None:
+    """The type the bytes actually are, read from their first marks."""
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if raw.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if raw.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if len(raw) >= 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def _check_image(image: dict | None) -> str | None:
+    """Validate an attached image; return its base64, or None.
+
+    A refused image raises ValueError with a plain sentence: an in-chat
+    error, never a crash, and the bytes are never passed on half-checked.
+    """
+    if image is None:
+        return None
+    if not isinstance(image, dict):
+        raise ValueError("That image did not arrive in a shape she can look at.")
+    declared = str(image.get("type") or "").strip().lower()
+    if declared not in IMAGE_TYPES:
+        raise ValueError("That image type is not one she can look at. Use a PNG, JPEG, WebP, or GIF.")
+    try:
+        raw = base64.b64decode(str(image.get("data") or ""), validate=True)
+    except ValueError:
+        raise ValueError("That image did not arrive whole. Try attaching it again.") from None
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise ValueError("That image is too large for her to look at. Keep it under 10 MB.")
+    if _sniff_image(raw) != declared:
+        raise ValueError("That file is not the image it claims to be. Use a PNG, JPEG, WebP, or GIF.")
+    return str(image.get("data") or "")
 
 
 def _web_intent(text: str) -> tuple[str, str] | None:
@@ -147,8 +189,32 @@ def visible_models(host: str, *, permission: bool, opener: Callable | None = Non
     return Scan(True, "ollama", tuple(public_tags(list(scan.models))), "")
 
 
-def _system(text: str, *, file_access: bool) -> tuple[str, str]:
-    choice = choose(text, has_vision=False, has_embed=False, file_access=file_access)
+def _wire_text(item: dict) -> str:
+    """What a stored turn says on the wire. The transcript keeps the
+    "[image]" placeholder; the model gets the words the user actually
+    wrote. A placeholder inside the prompt is noise to a vision model —
+    moondream answers it with silence."""
+    content = item["content"]
+    if item.get("image"):
+        if content == "[image]":
+            return ""
+        if content.endswith(" [image]"):
+            return content[: -len(" [image]")]
+    return content
+
+
+def _vision_model(host: str, opener: Callable | None = None) -> str | None:
+    """The local vision weights, if installed. suggest() never returns a
+    cloud or house tag, so an attached image can only ever be routed to
+    this machine's own Ollama."""
+    scan = visible_models(host, permission=True, opener=opener)
+    if not scan.ok:
+        return None
+    return suggest(list(scan.models)).get("vision")
+
+
+def _system(text: str, *, file_access: bool, has_vision: bool = False) -> tuple[str, str]:
+    choice = choose(text, has_vision=has_vision, has_embed=False, file_access=file_access)
     role = choice["role"] if choice["role"] in {"companion", "code", "vision"} else "companion"
     return role, read_prompt(role)
 
@@ -176,6 +242,39 @@ def iter_ollama(host: str, payload: dict, opener: Callable | None) -> Iterator[s
                 break
 
 
+def iter_openai(url: str, payload: dict, opener: Callable | None) -> Iterator[str]:
+    """Stream tokens from an OpenAI-compatible /chat/completions endpoint.
+
+    The wire shape is server-sent events: ``data: {json}`` lines and a
+    final ``data: [DONE]``. Content arrives at choices[0].delta.content.
+    """
+    fetch = opener or urlopen
+    req = Request(
+        url.rstrip("/") + "/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    with fetch(req, timeout=180) as resp:
+        while True:
+            line = resp.readline()
+            if not line:
+                break
+            raw = line.decode("utf-8") if isinstance(line, bytes) else line
+            raw = raw.strip()
+            if not raw.startswith("data:"):
+                continue
+            data = raw[len("data:"):].strip()
+            if data == "[DONE]":
+                break
+            chunk = json.loads(data)
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            token = ((choices[0].get("delta") or {}).get("content")) or ""
+            if token:
+                yield token
+
+
 def stream_chat(
     install: Path,
     *,
@@ -190,11 +289,26 @@ def stream_chat(
     opener: Callable | None = None,
     web_opener: Callable | None = None,
     web_resolver: Resolver | None = None,
+    image: dict | None = None,
+    scan_opener: Callable | None = None,
+    provider: Provider | None = None,
 ) -> Iterator[dict]:
     if not model:
         raise ValueError("Pick a model from the list.")
     if is_house(model):
         raise ValueError(f"{model} stays on the house. Pick a model from this list.")
+    image_b64 = _check_image(image)
+    mentions_image = any(
+        word in (text or "").lower() for word in ("image", "photo", "picture", "screenshot")
+    )
+    vision_model = (
+        _vision_model(host, scan_opener) if (image_b64 is not None or mentions_image) else None
+    )
+    if image_b64 is not None and not vision_model:
+        raise ValueError(
+            "No local vision model answered, so she cannot look at images right now. "
+            "The image was not sent anywhere."
+        )
     del use_prompt
     learn(install, text)
     profile = ensure_roots(install)
@@ -209,7 +323,15 @@ def stream_chat(
                 user_root=str(profile.get("user_root") or ""),
             )
         )
-    role, system = _system(text, file_access=bool(profile.get("file_access")))
+    role, system = _system(
+        text, file_access=bool(profile.get("file_access")), has_vision=vision_model is not None
+    )
+    if image_b64 is not None:
+        # An attached image is seen by the local vision weights under the
+        # vision prompt, whatever the picker says. The image bytes never
+        # travel with a cloud model — there is no such code path.
+        role = "vision"
+        system = read_prompt("vision")
     web_event: dict | None = None
     web_note = ""
     if web_enabled(profile):
@@ -219,13 +341,21 @@ def stream_chat(
     extra = context_block(install, work_path=session.get("work_path") or "")
     if extra:
         system = f"{system}\n\n{extra}".strip() if system else extra
-    session["messages"].append({"role": "user", "content": text, "at": _now()})
+    # The transcript keeps a placeholder, never the image bytes: session
+    # files stay small, and a picture is not quietly archived as data.
+    stored_text = text
+    if image_b64 is not None:
+        stored_text = f"{text} [image]".strip() if text.strip() else "[image]"
+    user_row = {"role": "user", "content": stored_text, "at": _now()}
+    if image_b64 is not None:
+        user_row["image"] = True
+    session["messages"].append(user_row)
     if session.get("title") in {"", "New session"}:
-        session["title"] = text.strip()[:48] or "New session"
+        session["title"] = stored_text.strip()[:48] or "New session"
     outbound = []
     if system:
         outbound.append({"role": "system", "content": system})
-    history = [{"role": item["role"], "content": item["content"]} for item in session["messages"]]
+    history = [{"role": item["role"], "content": _wire_text(item)} for item in session["messages"]]
     note = {"role": "system", "content": turn_note(session.get("work_path") or "")}
     if history and history[-1]["role"] == "user":
         outbound.extend(history[:-1])
@@ -238,30 +368,63 @@ def stream_chat(
         outbound.append(note)
         if web_note:
             outbound.append({"role": "system", "content": web_note})
+    if image_b64 is not None:
+        for item in reversed(outbound):
+            if item.get("role") == "user":
+                item["images"] = [image_b64]
+                break
     # The persona pack's sampler carries num_ctx and the role defaults;
     # the sliders the user set win for temperature and top_p.
     options = dict(sampler(role))
     options["temperature"] = temperature
     options["top_p"] = top_p
-    payload = {
-        "model": model,
-        "messages": outbound,
-        "stream": True,
-        "options": options,
-    }
+    used_model = vision_model if image_b64 is not None else model
+    # Transport: an attached image always rides the local Ollama vision
+    # path — image bytes never travel to another provider. Any other turn
+    # goes where the user pointed it: Ollama, unless the page named one
+    # of the install's OpenAI-compatible providers.
+    transport = Provider("ollama", "ollama", host, "Ollama")
+    use_openai = image_b64 is None and provider is not None and provider.kind == "openai"
+    if use_openai:
+        transport = provider
     parts: list[str] = []
     if web_event:
         yield web_event
     try:
-        for token in iter_ollama(host, payload, opener):
+        if use_openai:
+            payload = {
+                "model": used_model,
+                "messages": outbound,
+                "stream": True,
+                "temperature": temperature,
+                "top_p": top_p,
+            }
+            stream = iter_openai(transport.url, payload, opener)
+        else:
+            payload = {
+                "model": used_model,
+                "messages": outbound,
+                "stream": True,
+                "options": options,
+            }
+            stream = iter_ollama(host, payload, opener)
+        for token in stream:
             parts.append(token)
             yield {"token": token}
-    except Exception as exc:  # noqa: BLE001 — the page has to say Ollama failed
-        yield {"error": f"Ollama did not answer. {type(exc).__name__}: {exc}"}
+    except Exception as exc:  # noqa: BLE001 — the page has to say what failed
+        yield {"error": f"{transport.label} did not answer. {type(exc).__name__}: {exc}"}
         return
     reply = "".join(parts)
     session["messages"].append({"role": "assistant", "content": reply, "at": _now(), "role_name": role})
-    session["model"] = model
+    session["model"] = used_model
     save_session(install, session)
     Memory(install).add("episodes", text=text, outcome="said", session=session["id"], role=role)
-    yield {"done": True, "session": session, "role": role}
+    yield {
+        "done": True,
+        "session": session,
+        "role": role,
+        "model": used_model,
+        "vision": image_b64 is not None,
+        "provider": transport.label,
+        "local": transport.local,
+    }

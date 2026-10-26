@@ -8,21 +8,35 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 ## What is in this repository
 
-- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.0.0, described below.
+- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.1.0, described below.
+
+The cabin demo, the social campaign, and the merch are not in this tree.
 
 ## What happens when the app opens
 
 1. The install appears at `~/.mrs-milla-rayne` if it is not there: her workspace, a profile with every permission off, and three empty memory piles — canon, episodes, and reviews.
 2. Past episodes are folded into memory, and if a day has passed since the last one, she writes a structural review of that install's episodes. These instructions stay as shipped. A review while the app is closed stays off unless it is allowed.
 3. The model list starts empty. Press "Look for installed models" and she scans the local runtime for models that are already installed — only after that yes. If the runtime is not answering, the page says so in plain words.
-4. Private base tags are refused. A chat model is suggested, never forced. If a tag has code, coder, or coding in the name, it is suggested for development.
+4. Private base tags are refused. Private means named by the install, one per line in `state/private_bases.txt` — the build ships no list of its own. A chat model is suggested, never forced. If a tag has code, coder, or coding in the name, it is suggested for development.
 5. A tag ending in `:cloud` is a cloud model: the prompt leaves this machine. Cloud tags stay in the list, badged as cloud, and are never the auto-suggested pick. After a reply the page says plainly when a reply ran on a cloud model — "Reply stayed on this machine" appears only when it is true.
 6. Her workspace is always hers. Local file access stays off until the toggle on the page turns it on, and then it is read access to the directories opened for a session. Turning it on is the only grant; no sentence in a chat grants it. Files she adds stay in her workspace and can be downloaded. Nothing she writes is executed. She cannot delete the program that runs her.
-7. Vision and voice are not wired in this release. The window is text only.
+7. Voice is not wired in this release. Vision is wired, locally: attach a PNG, JPEG, WebP, or GIF (up to 10 MB) and the turn is answered by the local vision model if one is installed, under her vision prompt, whatever model the picker shows. The image is sent only to this machine's own runtime — never to another provider — and the transcript keeps an "[image]" placeholder, not the image bytes. After a vision reply the page says the local vision model did the looking. If no local vision model is installed, the attach control stays hidden and a note on the page says vision is off.
 
 ## The boot module
 
 `mrs_public.boot.first_boot` is a separate setup path, run from Python rather than from the window. It asks permission, scans a local runtime, refuses private base tags, suggests models, and writes dressed files to disk: an Ollama Modelfile, or a preset for llama.cpp / LM Studio (the file dresses the weights the person picked — it is not a fine-tune), an intro line for a custom voice at software volume 0.55, an empty truth log, and a neutral state file. It leaves the next setup steps unasked: lights, Bluetooth, local files, permissions. The window does not run it — but the window's requests carry the same sampler settings from `persona/sampler.json`, including the context size, so both paths treat the weights the same way.
+
+## Model providers
+
+Ollama is built in. The install may also name OpenAI-compatible servers — llama.cpp, LM Studio, Lemonade — in `state/profile.json`:
+
+```json
+"providers": [
+  {"kind": "openai", "url": "http://127.0.0.1:8080/v1", "label": "llama.cpp"}
+]
+```
+
+After a scan, those models join the picker under the provider's name. A reply from an endpoint that is not on this machine is reported as exactly that — it is never called local. Vision turns stay on this machine regardless: an attached image is only ever answered by the local vision model.
 
 ## Web lookup
 
