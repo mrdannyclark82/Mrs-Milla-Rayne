@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -98,11 +99,85 @@ def ensure_prompt_canon(install: Path) -> None:
         memory.add("canon", kind="canon", text=fact)
 
 
-def level_sentence(names: list[str]) -> str:
-    """Every name at one level. The count is part of the fact."""
-    shown = ", ".join(names) if names else "(empty)"
-    word = "name" if len(names) == 1 else "names"
-    return f"{len(names)} {word} at this one level, all of them: {shown}."
+SKIP_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+}
+MAX_TREE = 200
+
+
+def tree_paths(
+    root: Path,
+    *,
+    install: Path | None = None,
+    file_access: bool = False,
+    user_root: str = "",
+) -> tuple[list[str], int]:
+    """Every entry in the whole tree, as paths relative to the root.
+
+    Directories end with "/". Symlinks are not followed. Vendor and
+    cache folders are skipped by name. Entries her zones call closed
+    are skipped when the install is known. Returns (shown, total):
+    shown is capped at MAX_TREE entries; total counts everything the
+    walk found, so a capped listing can say so instead of trimming
+    silently.
+    """
+    if not root or not root.exists():
+        return [], 0
+    base = Path(root)
+    found: list[str] = []
+    for dirpath, dirnames, filenames in os.walk(base):
+        here = Path(dirpath)
+        dirnames[:] = sorted(
+            (
+                name
+                for name in dirnames
+                if name not in SKIP_DIRS and not (here / name).is_symlink()
+            ),
+            key=str.lower,
+        )
+        entries = [(here / name, True) for name in dirnames]
+        entries += [
+            (here / name, False) for name in sorted(filenames, key=str.lower)
+        ]
+        for path, is_dir in entries:
+            if path.is_symlink():
+                continue
+            if (
+                install is not None
+                and zone(
+                    path,
+                    install,
+                    file_access=file_access,
+                    user_root=user_root or str(base),
+                )
+                == "closed"
+            ):
+                continue
+            rel = path.relative_to(base).as_posix()
+            found.append(rel + "/" if is_dir else rel)
+    found.sort(key=str.lower)
+    return found[:MAX_TREE], len(found)
+
+
+def tree_sentence(shown: list[str], total: int) -> str:
+    """The whole tree in one sentence. The count is part of the fact,
+    and a capped listing says how much it left out."""
+    listing = ", ".join(shown) if shown else "(empty)"
+    if total > len(shown):
+        return (
+            f"{len(shown)} of {total} entries in the whole tree: {listing}. "
+            f"({total - len(shown)} more not listed.)"
+        )
+    word = "entry" if total == 1 else "entries"
+    return f"{total} {word} in the whole tree: {listing}."
 
 
 def context_block(install: Path, work_path: str = "") -> str:
@@ -117,11 +192,23 @@ def context_block(install: Path, work_path: str = "") -> str:
     parts.append("Her workspace contains: " + ", ".join(top_names(hers) or ["(empty)"]))
     if work_path:
         folder = Path(work_path)
-        names = top_names(folder, limit=0) if folder.is_dir() else []
+        if folder.is_dir():
+            shown, total = tree_paths(
+                folder,
+                install=install,
+                file_access=bool(profile.get("file_access")),
+                user_root=str(profile.get("user_root") or ""),
+            )
+        else:
+            shown, total = [], 0
         parts.append(f"Directory already read: {folder}.")
-        parts.append(level_sentence(names))
-        parts.append("Not the contents inside those entries.")
-        parts.append("That listing is from this machine. Use it. Do not scan the rest of the drive.")
+        parts.append(tree_sentence(shown, total))
+        parts.append(
+            "That is the whole tree, every subfolder. She may read any file in it: "
+            "when the user names a file in this tree, its text is fetched and put "
+            "in front of her. Outside this tree and her own workspace, the drive "
+            "stays closed."
+        )
     elif profile.get("file_access"):
         parts.append("Local file access is on. No session directory is set. Ask for one path.")
     else:
@@ -133,12 +220,12 @@ def context_block(install: Path, work_path: str = "") -> str:
 def turn_note(work_path: str = "") -> str:
     """Short fact placed beside the latest message so a base model cannot talk over it."""
     if work_path and Path(work_path).is_dir():
-        names = top_names(Path(work_path), limit=0)
+        shown, total = tree_paths(Path(work_path))
         return (
             f"Directory already read: {work_path}. "
-            + level_sentence(names)
-            + " Not the contents inside those entries. "
-            "This is a real listing from this machine. "
+            + tree_sentence(shown, total)
+            + " This is a real listing from this machine, the whole tree. "
+            "She may read any file in this tree when the user names it. "
             "Do not say you cannot read files. Do not ask for pasted command output. Do not call this roleplay."
         )
     return (

@@ -85,18 +85,39 @@ def delete_hers(install: Path, name: str) -> dict:
     return {"relative": rel.as_posix(), "deleted": True, "where": "hers"}
 
 
+def _decode(data: bytes) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return f"(binary file, {len(data)} bytes)"
+
+
 def read_home(install: Path, name: str, *, user_root: str) -> dict:
     """Read one file in the granted home. Install, program, and system paths stay closed."""
     rel = safe_relative(name)
     target = (Path(user_root) / rel).resolve()
     if zone(target, install, file_access=True, user_root=user_root) != "home" or not target.is_file():
         raise ValueError("that home path is closed")
-    data = target.read_bytes()
-    try:
-        content = data.decode("utf-8")
-    except UnicodeDecodeError:
-        content = f"(binary file, {len(data)} bytes)"
-    return {"relative": rel.as_posix(), "content": content, "where": "home"}
+    return {"relative": rel.as_posix(), "content": _decode(target.read_bytes()), "where": "home"}
+
+
+def read_under(install: Path, root: Path, name: str, *, user_root: str = "") -> dict:
+    """Read one file under a granted root — the session's active workspace.
+
+    The root itself was fenced when it was granted (accept_directory).
+    Anything under it that her zones call hers or home may be read, at
+    any depth. System paths, her install, and her program stay closed
+    even here.
+    """
+    rel = safe_relative(name)
+    base = Path(root).resolve()
+    target = (base / rel).resolve()
+    if target != base and base not in target.parents:
+        raise ValueError("that path leaves the workspace")
+    kind = zone(target, install, file_access=True, user_root=user_root or str(base))
+    if kind not in {"home", "hers"} or not target.is_file():
+        raise ValueError("that path is closed")
+    return {"relative": rel.as_posix(), "content": _decode(target.read_bytes()), "where": kind}
 
 
 def additions(install: Path) -> list[dict]:

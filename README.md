@@ -8,7 +8,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 ## What is in this repository
 
-- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.3.0, described below.
+- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.3.1, described below.
 
 
 ## What happens when the app opens
@@ -18,7 +18,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 3. The model list starts empty. Press "Look for installed models" and she scans the local runtime for models that are already installed — only after that yes. If the runtime is not answering, the page says so in plain words.
 4. Private base tags are refused. Private means named by the install, one per line in `state/private_bases.txt` — the build ships no list of its own. A chat model is suggested, never forced. If a tag has code, coder, or coding in the name, it is suggested for development.
 5. A tag ending in `:cloud` is a cloud model: the prompt leaves this machine. Cloud tags stay in the list, badged as cloud, and are never the auto-suggested pick. After a reply the page says plainly when a reply ran on a cloud model — "Reply stayed on this machine" appears only when it is true.
-6. Her workspace is always hers. Local file access stays off until the toggle on the page turns it on, and then it is read access to the directories opened for a session. Turning it on is the only grant; no sentence in a chat grants it. Files she adds stay in her workspace and can be downloaded. Nothing she writes is executed. She cannot delete the program that runs her.
+6. Her workspace is always hers. Local file access stays off until the toggle on the page turns it on, and then it is read access to the directories opened for a session. Turning it on is the only grant; no sentence in a chat grants it. A directory opened for a session is read as a whole tree — every file in every subfolder is listed for her, and when the user names a file in that tree, its text is fetched into the conversation (first 12,000 characters; a longer file says it was cut). Outside the opened tree, the drive stays closed. Files she adds stay in her workspace and can be downloaded. Nothing she writes is executed. She cannot delete the program that runs her.
 7. Vision is wired, locally: attach a PNG, JPEG, WebP, or GIF (up to 10 MB) and the turn is answered by the local vision model if one is installed, under her vision prompt, whatever model the picker shows. The image is sent only to this machine's own runtime — never to another provider — and the transcript keeps an "[image]" placeholder, not the image bytes. After a vision reply the page says the local vision model did the looking. If no local vision model is installed, the attach control stays hidden and a note on the page says vision is off.
 
 ## The boot module

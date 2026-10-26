@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import tempfile
 import unittest
@@ -9,11 +10,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from mrs_public.bounds import accept_directory, app_root, can_delete, zone
-from mrs_public.canvas import delete_hers, download_desk, place, read_home
+from mrs_public.canvas import delete_hers, download_desk, place, read_home, read_under
+from mrs_public.chat import stream_chat
 from mrs_public.memory import Memory
 from mrs_public.pack import read_prompt
-from mrs_public.recall import context_block, learn_history, turn_note
+from mrs_public.recall import context_block, learn_history, tree_paths, turn_note
 from mrs_public.review import on_open
+from mrs_public.view import ensure_install
 
 
 class MemoryCanvasTest(unittest.TestCase):
@@ -93,22 +96,23 @@ class MemoryCanvasTest(unittest.TestCase):
         (user / "Projects").mkdir()
         profile = json.loads(profile_path.read_text(encoding="utf-8")) if profile_path.exists() else {}
         profile["user_root"] = str(user)
+        profile["file_access"] = True
         profile_path.write_text(json.dumps(profile), encoding="utf-8")
         block = context_block(install, work_path=str(user))
         self.assertIn("Jordan Ellis", block)
         self.assertIn("Her workspace is always available", block)
         self.assertIn("Projects", block)
         self.assertIn("Directory already read", block)
-        self.assertIn("1 name at this one level, all of them: Projects.", block)
-        self.assertIn("Not the contents inside those entries.", block)
+        self.assertIn("1 entry in the whole tree: Projects/.", block)
+        self.assertNotIn("Not the contents inside those entries.", block)
         self.assertNotIn("roleplay", block.lower())
         self.assertNotIn("Projects", context_block(install))
         note = turn_note(str(user))
-        self.assertIn("1 name at this one level, all of them: Projects.", note)
-        self.assertIn("Not the contents inside those entries.", note)
+        self.assertIn("1 entry in the whole tree: Projects/.", note)
+        self.assertNotIn("Not the contents inside those entries.", note)
         empty = Path(tempfile.mkdtemp())
-        self.assertIn("0 names at this one level, all of them: (empty).", turn_note(str(empty)))
-        self.assertIn("0 names at this one level, all of them: (empty).", context_block(install, work_path=str(empty)))
+        self.assertIn("0 entries in the whole tree: (empty).", turn_note(str(empty)))
+        self.assertIn("0 entries in the whole tree: (empty).", context_block(install, work_path=str(empty)))
 
     def test_review_runs_on_open_and_leaves_the_prompt(self):
         install = Path(tempfile.mkdtemp())
@@ -138,6 +142,153 @@ class MemoryCanvasTest(unittest.TestCase):
         self.assertFalse(again["ran"])
         sleeping = on_open(memory, now + timedelta(days=2), background=True, allow_background=False)
         self.assertIn("Background review is off", sleeping["reason"])
+
+
+class _Body:
+    def __init__(self, raw: bytes):
+        self._raw = io.BytesIO(raw)
+
+    def readline(self):
+        return self._raw.readline()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def _granted_install() -> tuple[Path, Path, Path]:
+    """An install with file access granted, and a small project tree."""
+    install = ensure_install(Path(tempfile.mkdtemp()))
+    home = Path(tempfile.mkdtemp())
+    work = home / "proj"
+    (work / "sub" / "deep").mkdir(parents=True)
+    (work / "top.txt").write_text("top level\n", encoding="utf-8")
+    (work / "sub" / "notes.txt").write_text("hello from the tree\n", encoding="utf-8")
+    (work / "sub" / "deep" / "deeper.txt").write_text("all the way down\n", encoding="utf-8")
+    (work / "node_modules" / "junk.js").parent.mkdir(parents=True)
+    (work / "node_modules" / "junk.js").write_text("noise\n", encoding="utf-8")
+    profile_path = install / "state" / "profile.json"
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    profile["file_access"] = True
+    profile["user_root"] = str(home)
+    profile_path.write_text(json.dumps(profile), encoding="utf-8")
+    return install, home, work
+
+
+class TreeListingTest(unittest.TestCase):
+    def test_tree_is_recursive_and_skips_noise(self):
+        install, _home, work = _granted_install()
+        shown, total = tree_paths(work)
+        self.assertIn("sub/notes.txt", shown)
+        self.assertIn("sub/deep/deeper.txt", shown)
+        self.assertIn("sub/", shown)
+        self.assertFalse(any("node_modules" in name for name in shown))
+        self.assertEqual(total, len(shown))
+        block = context_block(install, work_path=str(work))
+        self.assertIn("sub/deep/deeper.txt", block)
+        self.assertIn(f"{total} entries in the whole tree", block)
+        self.assertIn("whole tree", turn_note(str(work)))
+
+    def test_read_under_reads_at_any_depth_and_refuses_outside(self):
+        install, home, work = _granted_install()
+        row = read_under(install, work, "sub/deep/deeper.txt", user_root=str(home))
+        self.assertEqual(row["content"], "all the way down\n")
+        self.assertEqual(row["where"], "home")
+        (home / "secret.txt").write_text("not hers\n", encoding="utf-8")
+        with self.assertRaises(ValueError):
+            read_under(install, work, "../secret.txt", user_root=str(home))
+        with self.assertRaises(ValueError):
+            read_under(install, work, "missing.txt", user_root=str(home))
+
+
+class WorkspaceFileChatTest(unittest.TestCase):
+    def _fetch(self, captured: dict):
+        def fetch(req, timeout=180):
+            captured["payload"] = json.loads(req.data.decode())
+            return _Body(b'{"message": {"content": "Read it."}, "done": true}\n')
+
+        return fetch
+
+    def test_named_file_is_fetched_into_the_turn(self):
+        install, _home, work = _granted_install()
+        captured: dict = {}
+        rows = list(
+            stream_chat(
+                install,
+                text=f"work in {work}",
+                model="gemma2:2b",
+                opener=self._fetch(captured),
+            )
+        )
+        session_id = rows[-1]["session"]["id"]
+        rows = list(
+            stream_chat(
+                install,
+                text="please read sub/notes.txt",
+                model="gemma2:2b",
+                session_id=session_id,
+                opener=self._fetch(captured),
+            )
+        )
+        events = [row["file"] for row in rows if "file" in row]
+        self.assertEqual(events, [{"path": "sub/notes.txt", "ok": True}])
+        wire = "\n".join(item["content"] for item in captured["payload"]["messages"])
+        self.assertIn("hello from the tree", wire)
+        self.assertIn("BEGIN FILE TEXT", wire)
+        self.assertIn("sub/deep/deeper.txt", wire)
+
+    def test_mention_without_a_reading_word_fetches_nothing(self):
+        install, _home, work = _granted_install()
+        captured: dict = {}
+        rows = list(
+            stream_chat(
+                install,
+                text=f"work in {work}",
+                model="gemma2:2b",
+                opener=self._fetch(captured),
+            )
+        )
+        session_id = rows[-1]["session"]["id"]
+        rows = list(
+            stream_chat(
+                install,
+                text="I put sub/notes.txt in there yesterday",
+                model="gemma2:2b",
+                session_id=session_id,
+                opener=self._fetch(captured),
+            )
+        )
+        self.assertFalse(any("file" in row for row in rows))
+        wire = "\n".join(item["content"] for item in captured["payload"]["messages"])
+        self.assertNotIn("BEGIN FILE TEXT", wire)
+
+    def test_a_file_outside_the_tree_is_not_opened(self):
+        install, home, work = _granted_install()
+        (home / "secret.txt").write_text("not hers\n", encoding="utf-8")
+        captured: dict = {}
+        rows = list(
+            stream_chat(
+                install,
+                text=f"work in {work}",
+                model="gemma2:2b",
+                opener=self._fetch(captured),
+            )
+        )
+        session_id = rows[-1]["session"]["id"]
+        rows = list(
+            stream_chat(
+                install,
+                text=f"read {home}/secret.txt",
+                model="gemma2:2b",
+                session_id=session_id,
+                opener=self._fetch(captured),
+            )
+        )
+        self.assertFalse(any("file" in row for row in rows))
+        wire = "\n".join(item["content"] for item in captured["payload"]["messages"])
+        self.assertNotIn("not hers", wire)
 
 
 if __name__ == "__main__":
