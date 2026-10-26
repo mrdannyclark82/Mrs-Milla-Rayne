@@ -10,8 +10,6 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 - The app — `mrs_public/`, `persona/`, and `tests/` — version 1.0.0, described below.
 
-The cabin demo, the social campaign, and the merch are not in this tree.
-
 ## What happens when the app opens
 
 1. The install appears at `~/.mrs-milla-rayne` if it is not there: her workspace, a profile with every permission off, and three empty memory piles — canon, episodes, and reviews.
