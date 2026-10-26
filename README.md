@@ -8,7 +8,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 
 ## What is in this repository
 
-- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.1.0, described below.
+- The app — `mrs_public/`, `persona/`, and `tests/` — version 1.2.0, described below.
 
 
 ## What happens when the app opens
@@ -19,7 +19,7 @@ This folder is the app. It dresses a model that is already installed. It does no
 4. Private base tags are refused. Private means named by the install, one per line in `state/private_bases.txt` — the build ships no list of its own. A chat model is suggested, never forced. If a tag has code, coder, or coding in the name, it is suggested for development.
 5. A tag ending in `:cloud` is a cloud model: the prompt leaves this machine. Cloud tags stay in the list, badged as cloud, and are never the auto-suggested pick. After a reply the page says plainly when a reply ran on a cloud model — "Reply stayed on this machine" appears only when it is true.
 6. Her workspace is always hers. Local file access stays off until the toggle on the page turns it on, and then it is read access to the directories opened for a session. Turning it on is the only grant; no sentence in a chat grants it. Files she adds stay in her workspace and can be downloaded. Nothing she writes is executed. She cannot delete the program that runs her.
-7. Voice is not wired in this release. Vision is wired, locally: attach a PNG, JPEG, WebP, or GIF (up to 10 MB) and the turn is answered by the local vision model if one is installed, under her vision prompt, whatever model the picker shows. The image is sent only to this machine's own runtime — never to another provider — and the transcript keeps an "[image]" placeholder, not the image bytes. After a vision reply the page says the local vision model did the looking. If no local vision model is installed, the attach control stays hidden and a note on the page says vision is off.
+7. Vision is wired, locally: attach a PNG, JPEG, WebP, or GIF (up to 10 MB) and the turn is answered by the local vision model if one is installed, under her vision prompt, whatever model the picker shows. The image is sent only to this machine's own runtime — never to another provider — and the transcript keeps an "[image]" placeholder, not the image bytes. After a vision reply the page says the local vision model did the looking. If no local vision model is installed, the attach control stays hidden and a note on the page says vision is off.
 
 ## The boot module
 
@@ -36,6 +36,15 @@ Ollama is built in. The install may also name OpenAI-compatible servers — llam
 ```
 
 After a scan, those models join the picker under the provider's name. A reply from an endpoint that is not on this machine is reported as exactly that — it is never called local. Vision turns stay on this machine regardless: an attached image is only ever answered by the local vision model.
+
+## Voice
+
+She can speak a reply aloud, with XTTS v2, synthesized entirely on this machine. Voice is off until the toggle in the panel turns it on, and then each reply carries a Speak button — nothing is spoken unasked. It needs two things this build does not ship:
+
+- The engine: `pip install coqui-tts`. The XTTS v2 weights (about 1.8 GB) download the first time the model loads; after that, synthesis is local. The first load may ask you to accept Coqui's terms once — the app never accepts them for you.
+- A reference clip: a few seconds of the voice to clone, placed at `state/voice_reference.wav` (or `.mp3`) in the install. No clip ships in this repository. The clip stays in the install; it is read there and never sent anywhere.
+
+XTTS v2 is published under the Coqui Public Model License: free for personal and non-commercial use, with commercial use restricted by that license. If either piece is missing, the panel says which one, in plain words, and the window stays text-only.
 
 ## Web lookup
 

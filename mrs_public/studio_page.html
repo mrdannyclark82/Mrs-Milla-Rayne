@@ -190,6 +190,10 @@
         <span><strong>Local file access</strong><br><small id="access-note">Off. Her workspace is already hers. Your files stay closed.</small></span>
         <input id="file-access" type="checkbox">
       </label>
+      <label class="skill">
+        <span><strong>Voice (XTTS)</strong><br><small id="voice-note">Off.</small></span>
+        <input id="voice-on" type="checkbox">
+      </label>
       <div class="skill">
         <span><strong>Execution</strong><br><small>Off. Seeing a file is not permission to run it.</small></span>
         <input type="checkbox" disabled>
@@ -203,7 +207,7 @@
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
-    const state = { session: null, sending: false, scanAllowed: false, fileAccess: false, image: null, visionModel: "" };
+    const state = { session: null, sending: false, scanAllowed: false, fileAccess: false, image: null, visionModel: "", voiceOn: false, voiceReady: false };
 
     function esc(text) {
       return String(text || "").replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
@@ -227,12 +231,32 @@
         if (msg.role === "user") {
           return `<div class="user-wrap"><div class="meta">you</div><div class="bubble user"><pre>${esc(msg.content)}</pre></div></div>`;
         }
-        return `<div class="asst-wrap"><div class="meta">${esc(msg.role_name || "Mrs. Rayne")}</div><div class="bubble assistant"><pre class="answer">${esc(msg.content)}</pre><button class="save" data-save="${index}">Save to desk</button></div></div>`;
+        const speakBtn = state.voiceOn && state.voiceReady ? `<button class="save" data-speak="${index}">Speak</button>` : "";
+        return `<div class="asst-wrap"><div class="meta">${esc(msg.role_name || "Mrs. Rayne")}</div><div class="bubble assistant"><pre class="answer">${esc(msg.content)}</pre><button class="save" data-save="${index}">Save to desk</button>${speakBtn}</div></div>`;
       }).join("");
       col.querySelectorAll("[data-save]").forEach((btn) => {
         btn.onclick = () => saveReply(messages[Number(btn.dataset.save)].content);
       });
+      col.querySelectorAll("[data-speak]").forEach((btn) => {
+        btn.onclick = () => speakReply(messages[Number(btn.dataset.speak)].content);
+      });
       $("thread").scrollTop = $("thread").scrollHeight;
+    }
+
+    async function speakReply(text) {
+      try {
+        const res = await fetch("/api/speak", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (!res.ok) { const row = await res.json(); throw new Error(row.error || "The voice did not answer."); }
+        const blob = await res.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        await audio.play();
+      } catch (err) {
+        $("fine").textContent = err.message;
+      }
     }
 
     function renderSessions(rows) {
@@ -267,6 +291,14 @@
       state.fileAccess = snapshot.file_access;
       $("live-dot").classList.toggle("down", !snapshot.ollama_ok);
       $("file-access").checked = snapshot.file_access;
+      state.voiceOn = !!snapshot.voice_enabled;
+      state.voiceReady = !!(snapshot.voice && snapshot.voice.available);
+      $("voice-on").checked = state.voiceOn;
+      $("voice-note").textContent = !state.voiceReady
+        ? ((snapshot.voice && snapshot.voice.reason) || "Voice is off.")
+        : state.voiceOn
+          ? "On. Replies can be spoken aloud, made on this machine."
+          : "Ready. Turn on to hear her replies spoken.";
       $("access-note").textContent = snapshot.file_access
         ? "On. Home directories are readable. rwx stays inside her workspace. System files stay closed."
         : "Off. Home directories stay closed. rwx stays inside her workspace.";
@@ -339,6 +371,14 @@
         body: JSON.stringify({ file_access: $("file-access").checked })
       });
       refresh();
+    };
+    $("voice-on").onchange = async () => {
+      await api("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ voice_enabled: $("voice-on").checked })
+      });
+      refresh().then(renderMessages);
     };
     $("scan-models").onclick = async () => {
       await api("/api/profile", {

@@ -24,6 +24,7 @@ from .scan import scan_openai
 from .names import PRODUCT
 from .recall import ensure_roots, learn_history
 from .review import on_open
+from .voice import synthesize_reply, voice_status
 
 PAGE = Path(__file__).with_name("studio_page.html")
 HOST = "127.0.0.1"
@@ -82,6 +83,7 @@ def load_profile(install: Path) -> dict:
     data.setdefault("file_access", False)
     data.setdefault("workspace", "")
     data.setdefault("scan_allowed", False)
+    data.setdefault("voice_enabled", False)
     data["execute"] = False
     return data
 
@@ -106,6 +108,8 @@ def update_profile(install: Path, patch: dict) -> dict:
         profile["scan_allowed"] = bool(patch["scan_allowed"])
     if "providers" in patch:
         profile["providers"] = patch["providers"]
+    if "voice_enabled" in patch:
+        profile["voice_enabled"] = bool(patch["voice_enabled"])
     return save_profile(install, profile)
 
 
@@ -185,6 +189,8 @@ def state(install: Path, scan_opener=None) -> dict:
         "ollama_error": ollama_error,
         "models": models,
         "provider_models": provider_models,
+        "voice_enabled": bool(profile.get("voice_enabled")),
+        "voice": voice_status(install),
         "suggested": (suggest(models).get("companion") if models else "") or "",
         "vision_model": (suggest(models).get("vision") if models else "") or "",
         "sessions": list_sessions(install),
@@ -194,7 +200,7 @@ def state(install: Path, scan_opener=None) -> dict:
     }
 
 
-def make_handler(install: Path, chat_opener=None, scan_opener=None):
+def make_handler(install: Path, chat_opener=None, scan_opener=None, voice_engine=None):
     root = Path(install)
 
     class Handler(BaseHTTPRequestHandler):
@@ -311,6 +317,17 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
                 except ValueError as exc:
                     self._json(400, {"error": str(exc)})
                 return
+            if parsed.path == "/api/speak":
+                try:
+                    profile = load_profile(root)
+                    if not profile.get("voice_enabled"):
+                        raise ValueError("Voice is off. Turn it on in the panel first.")
+                    audio = synthesize_reply(root, str(body.get("text") or ""), engine=voice_engine)
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                    return
+                self._send(200, audio, "audio/wav")
+                return
             if parsed.path == "/api/chat":
                 self._chat(body)
                 return
@@ -367,14 +384,14 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None):
     return Handler
 
 
-def serve(install: Path, port: int = PORT, chat_opener=None, scan_opener=None) -> ThreadingHTTPServer:
+def serve(install: Path, port: int = PORT, chat_opener=None, scan_opener=None, voice_engine=None) -> ThreadingHTTPServer:
     install = ensure_install(install)
     # Once, when the app opens — not on every state poll: fold past
     # episodes into memory, then run the daily structural review.
     # on_open gates itself to once a day.
     learn_history(install)
     on_open(Memory(install), datetime.now(timezone.utc))
-    server = ThreadingHTTPServer((HOST, port), make_handler(install, chat_opener, scan_opener))
+    server = ThreadingHTTPServer((HOST, port), make_handler(install, chat_opener, scan_opener, voice_engine))
     return server
 
 
