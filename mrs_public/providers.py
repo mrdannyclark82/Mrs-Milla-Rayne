@@ -12,16 +12,29 @@ A provider is just a kind and a base URL:
 Locality is read off the URL, never assumed: a loopback host is on this
 machine; anything else is somewhere else, and a reply from it is never
 called local.
+
+Traffic to a loopback URL goes through ``open_model``: no proxy from the
+environment, and a socket whose peer is not a loopback address is closed
+before a byte is written. A reply called local therefore came over a
+socket that never left this machine.
 """
 
 from __future__ import annotations
 
+import http.client
+import ipaddress
 import re
+import socket
 from dataclasses import dataclass
 from urllib.parse import urlparse
+from urllib.request import HTTPHandler, HTTPSHandler, ProxyHandler, Request, build_opener, urlopen
 
 OLLAMA_URL = "http://127.0.0.1:11434"
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def is_loopback_url(url: str) -> bool:
+    return (urlparse(url).hostname or "") in LOOPBACK_HOSTS
 
 
 @dataclass(frozen=True)
@@ -33,7 +46,70 @@ class Provider:
 
     @property
     def local(self) -> bool:
-        return (urlparse(self.url).hostname or "") in LOOPBACK_HOSTS
+        return is_loopback_url(self.url)
+
+
+class NotOnThisMachine(OSError):
+    """A loopback URL connected to a peer that is not this machine."""
+
+
+def _loopback_address(raw: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(raw.split("%", 1)[0])
+    except ValueError:
+        return False
+    mapped = getattr(ip, "ipv4_mapped", None)
+    return bool(ip.is_loopback or (mapped is not None and mapped.is_loopback))
+
+
+def _connect_loopback(address, *args, **kwargs) -> socket.socket:
+    sock = socket.create_connection(address, *args, **kwargs)
+    try:
+        peer = str(sock.getpeername()[0])
+    except OSError:
+        sock.close()
+        raise
+    if not _loopback_address(peer):
+        sock.close()
+        raise NotOnThisMachine(f"{address[0]} answered from {peer}, which is not this machine.")
+    return sock
+
+
+class _LoopbackHTTP(http.client.HTTPConnection):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._create_connection = _connect_loopback
+
+
+class _LoopbackHTTPS(http.client.HTTPSConnection):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._create_connection = _connect_loopback
+
+
+class _LoopbackHTTPHandler(HTTPHandler):
+    def http_open(self, req):  # noqa: ANN001, ANN201
+        return self.do_open(_LoopbackHTTP, req)
+
+
+class _LoopbackHTTPSHandler(HTTPSHandler):
+    def https_open(self, req):  # noqa: ANN001, ANN201
+        return self.do_open(_LoopbackHTTPS, req, context=self._context)
+
+
+def open_model(target: Request | str, timeout: float):
+    """Open a request to a model server.
+
+    A loopback URL is never handed to an environment proxy, and redirects
+    it answers with stay under the same loopback-only socket rule. Other
+    hosts keep the ordinary client; their replies are not called local.
+    """
+    url = target.full_url if isinstance(target, Request) else str(target)
+    if not is_loopback_url(url):
+        return urlopen(target, timeout=timeout)
+    # Built per call: the TLS context reads SSL_CERT_FILE when it is made.
+    opener = build_opener(ProxyHandler({}), _LoopbackHTTPHandler(), _LoopbackHTTPSHandler())
+    return opener.open(target, timeout=timeout)
 
 
 def _slug(text: str) -> str:

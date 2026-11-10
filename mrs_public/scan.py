@@ -6,7 +6,8 @@ import json
 from dataclasses import dataclass
 from typing import Callable
 from urllib.error import URLError
-from urllib.request import urlopen
+
+from .providers import open_model
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,7 @@ def scan_ollama(
 ) -> Scan:
     if not permission:
         return Scan(False, "ollama", (), "Need permission before I look at installed models.")
-    fetch = opener or urlopen
+    fetch = opener or open_model
     url = host.rstrip("/") + "/api/tags"
     try:
         with fetch(url, timeout=timeout) as resp:
@@ -55,7 +56,7 @@ def scan_openai(
     """Models on an OpenAI-compatible server (llama.cpp, LM Studio, Lemonade)."""
     if not permission:
         return Scan(False, "openai", (), "Need permission before I look at installed models.")
-    fetch = opener or urlopen
+    fetch = opener or open_model
     target = url.rstrip("/") + "/models"
     try:
         with fetch(target, timeout=timeout) as resp:
