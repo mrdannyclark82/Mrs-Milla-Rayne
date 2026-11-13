@@ -156,7 +156,7 @@ def tree_paths(
                     path,
                     install,
                     file_access=file_access,
-                    user_root=user_root or str(base),
+                    user_root=user_root,
                 )
                 == "closed"
             ):
@@ -180,24 +180,36 @@ def tree_sentence(shown: list[str], total: int) -> str:
     return f"{total} {word} in the whole tree: {listing}."
 
 
-def context_block(install: Path, work_path: str = "") -> str:
+def _open_directory(work_path: str, install: Path, *, file_access: bool, user_root: str) -> Path | None:
+    if not work_path:
+        return None
+    folder = Path(work_path)
+    if zone(folder, install, file_access=file_access, user_root=user_root) not in {"home", "hers"}:
+        return None
+    return folder
+
+
+def context_block(install: Path, work_path: str = "", *, profile: dict | None = None) -> str:
     ensure_prompt_canon(install)
     memory = Memory(install)
-    profile = ensure_roots(install)
+    if profile is None:
+        profile = ensure_roots(install)
+    file_access = bool(profile.get("file_access"))
+    user_root = str(profile.get("user_root") or "")
     lines = [str(row.get("text") or "") for row in memory.read("canon") if row.get("text")]
     hers = her_workspace(install)
     parts = ["Operational record for this install. Not a scenario."]
     parts.extend(f"- {line}" for line in lines)
     parts.append(f"Her workspace is always available at {hers}. She has rwx there only.")
     parts.append("Her workspace contains: " + ", ".join(top_names(hers) or ["(empty)"]))
-    if work_path:
-        folder = Path(work_path)
+    folder = _open_directory(work_path, install, file_access=file_access, user_root=user_root)
+    if folder is not None:
         if folder.is_dir():
             shown, total = tree_paths(
                 folder,
                 install=install,
-                file_access=bool(profile.get("file_access")),
-                user_root=str(profile.get("user_root") or ""),
+                file_access=file_access,
+                user_root=user_root,
             )
         else:
             shown, total = [], 0
@@ -217,10 +229,29 @@ def context_block(install: Path, work_path: str = "") -> str:
     return "\n".join(parts)
 
 
-def turn_note(work_path: str = "") -> str:
-    """Short fact placed beside the latest message so a base model cannot talk over it."""
+def turn_note(
+    work_path: str = "",
+    *,
+    install: Path | None = None,
+    file_access: bool = False,
+    user_root: str = "",
+) -> str:
+    """Short fact placed beside the latest message so a base model cannot talk over it.
+
+    With the install known, the directory and every entry are held to her
+    zones under the given flag and root, the same as context_block.
+    """
+    if install is not None and _open_directory(
+        work_path, install, file_access=file_access, user_root=user_root
+    ) is None:
+        work_path = ""
     if work_path and Path(work_path).is_dir():
-        shown, total = tree_paths(Path(work_path))
+        shown, total = tree_paths(
+            Path(work_path),
+            install=install,
+            file_access=file_access,
+            user_root=user_root,
+        )
         return (
             f"Directory already read: {work_path}. "
             + tree_sentence(shown, total)

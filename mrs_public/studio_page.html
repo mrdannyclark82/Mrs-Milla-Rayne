@@ -376,6 +376,9 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file_access: $("file-access").checked })
       });
+      if (state.session && state.session.id) {
+        state.session = await api("/api/sessions/" + state.session.id);
+      }
       refresh();
     };
     $("memory-look").onclick = async () => {

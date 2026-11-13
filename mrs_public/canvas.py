@@ -101,20 +101,20 @@ def read_home(install: Path, name: str, *, user_root: str) -> dict:
     return {"relative": rel.as_posix(), "content": _decode(target.read_bytes()), "where": "home"}
 
 
-def read_under(install: Path, root: Path, name: str, *, user_root: str = "") -> dict:
+def read_under(install: Path, root: Path, name: str, *, file_access: bool, user_root: str = "") -> dict:
     """Read one file under a granted root — the session's active workspace.
 
-    The root itself was fenced when it was granted (accept_directory).
-    Anything under it that her zones call hers or home may be read, at
-    any depth. System paths, her install, and her program stay closed
-    even here.
+    Anything under it that her zones call hers or home, under the
+    profile's own file-access flag and home root, may be read at any
+    depth. System paths, her install, and her program stay closed even
+    here, and home stays closed while file access is off.
     """
     rel = safe_relative(name)
     base = Path(root).resolve()
     target = (base / rel).resolve()
     if target != base and base not in target.parents:
         raise ValueError("that path leaves the workspace")
-    kind = zone(target, install, file_access=True, user_root=user_root or str(base))
+    kind = zone(target, install, file_access=file_access, user_root=user_root)
     if kind not in {"home", "hers"} or not target.is_file():
         raise ValueError("that path is closed")
     return {"relative": rel.as_posix(), "content": _decode(target.read_bytes()), "where": kind}

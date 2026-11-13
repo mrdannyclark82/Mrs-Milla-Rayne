@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 from urllib.request import Request
 
-from .bounds import accept_directory
+from .bounds import grant_directory, granted_directory
 from .canvas import read_under
 from .cortex import choose
 from .memory import Memory
@@ -167,7 +167,9 @@ def _file_ask(text: str, work_path: str) -> Path | None:
     return None
 
 
-def _file_block(target: Path, install: Path, work_path: str, user_root: str) -> tuple[str, dict]:
+def _file_block(
+    target: Path, install: Path, work_path: str, *, file_access: bool, user_root: str
+) -> tuple[str, dict]:
     """Read one workspace file and fence its text for this turn.
 
     Failure becomes a plain sentence, not a crash — the same rule as
@@ -176,7 +178,7 @@ def _file_block(target: Path, install: Path, work_path: str, user_root: str) -> 
     base = Path(work_path).resolve()
     rel = target.resolve().relative_to(base).as_posix()
     try:
-        row = read_under(install, base, rel, user_root=user_root)
+        row = read_under(install, base, rel, file_access=file_access, user_root=user_root)
     except Exception as exc:  # noqa: BLE001 — a refused read is a sentence, not a crash
         note = (
             f"A read of the file \"{rel}\" in the active workspace was attempted just now "
@@ -242,6 +244,23 @@ def save_session(install: Path, data: dict) -> dict:
     tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)  # a crash mid-write leaves the old session, not a torn one
     return data
+
+
+def close_session_directories(install: Path) -> None:
+    """Forget every session directory. Runs when file access is turned off."""
+    for path in sessions_dir(install).glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        if "work_path" in data or "work_grant" in data:
+            data.pop("work_path", None)
+            data.pop("work_grant", None)
+            tmp = path.with_name(f".{path.stem}.tmp")
+            tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            tmp.replace(path)
 
 
 def create_session(install: Path, model: str) -> dict:
@@ -385,17 +404,17 @@ def stream_chat(
     del use_prompt
     learn(install, text)
     profile = ensure_roots(install)
+    file_access_on = bool(profile.get("file_access"))
+    user_root = str(profile.get("user_root") or "")
     session = load_session(install, session_id) if session_id else create_session(install, model)
     asked = WORK_RE.search(text or "")
     if asked:
-        session["work_path"] = str(
-            accept_directory(
-                asked.group(1).rstrip(".,)"),
-                install,
-                file_access=bool(profile.get("file_access")),
-                user_root=str(profile.get("user_root") or ""),
-            )
-        )
+        session.update(grant_directory(asked.group(1).rstrip(".,)"), install, profile))
+    work = granted_directory(session, install, profile)
+    if work is None:
+        session.pop("work_path", None)
+        session.pop("work_grant", None)
+    work_path = str(work) if work is not None else ""
     role, system = _system(
         text, file_access=bool(profile.get("file_access")), has_vision=vision_model is not None
     )
@@ -413,16 +432,17 @@ def stream_chat(
             web_note, web_event = _web_block(intent, opener=web_opener, resolver=web_resolver)
     file_event: dict | None = None
     file_note = ""
-    if session.get("work_path"):
-        asked_file = _file_ask(text, session["work_path"])
+    if work_path:
+        asked_file = _file_ask(text, work_path)
         if asked_file is not None:
             file_note, file_event = _file_block(
                 asked_file,
                 install,
-                session["work_path"],
-                str(profile.get("user_root") or ""),
+                work_path,
+                file_access=file_access_on,
+                user_root=user_root,
             )
-    extra = context_block(install, work_path=session.get("work_path") or "")
+    extra = context_block(install, work_path=work_path, profile=profile)
     if extra:
         system = f"{system}\n\n{extra}".strip() if system else extra
     # One skill may ride a text turn: know-how the install taught her,
@@ -449,7 +469,10 @@ def stream_chat(
     if system:
         outbound.append({"role": "system", "content": system})
     history = [{"role": item["role"], "content": _wire_text(item)} for item in session["messages"]]
-    note = {"role": "system", "content": turn_note(session.get("work_path") or "")}
+    note = {
+        "role": "system",
+        "content": turn_note(work_path, install=install, file_access=file_access_on, user_root=user_root),
+    }
     if history and history[-1]["role"] == "user":
         outbound.extend(history[:-1])
         outbound.append(note)

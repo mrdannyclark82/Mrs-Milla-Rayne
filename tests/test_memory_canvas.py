@@ -110,7 +110,7 @@ class MemoryCanvasTest(unittest.TestCase):
         note = turn_note(str(user))
         self.assertIn("1 entry in the whole tree: Projects/.", note)
         self.assertNotIn("Not the contents inside those entries.", note)
-        empty = Path(tempfile.mkdtemp())
+        empty = Path(tempfile.mkdtemp(dir=user))
         self.assertIn("0 entries in the whole tree: (empty).", turn_note(str(empty)))
         self.assertIn("0 entries in the whole tree: (empty).", context_block(install, work_path=str(empty)))
 
@@ -193,14 +193,14 @@ class TreeListingTest(unittest.TestCase):
 
     def test_read_under_reads_at_any_depth_and_refuses_outside(self):
         install, home, work = _granted_install()
-        row = read_under(install, work, "sub/deep/deeper.txt", user_root=str(home))
+        row = read_under(install, work, "sub/deep/deeper.txt", file_access=True, user_root=str(home))
         self.assertEqual(row["content"], "all the way down\n")
         self.assertEqual(row["where"], "home")
         (home / "secret.txt").write_text("not hers\n", encoding="utf-8")
         with self.assertRaises(ValueError):
-            read_under(install, work, "../secret.txt", user_root=str(home))
+            read_under(install, work, "../secret.txt", file_access=True, user_root=str(home))
         with self.assertRaises(ValueError):
-            read_under(install, work, "missing.txt", user_root=str(home))
+            read_under(install, work, "missing.txt", file_access=True, user_root=str(home))
 
 
 class WorkspaceFileChatTest(unittest.TestCase):

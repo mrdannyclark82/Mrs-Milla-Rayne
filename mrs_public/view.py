@@ -7,15 +7,24 @@ Open: http://127.0.0.1:8790
 from __future__ import annotations
 
 import json
+import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from . import __version__
-from .bounds import accept_directory
+from .bounds import grant_directory
 from .canvas import additions, download_desk, place, read_home
-from .chat import create_session, list_sessions, load_session, save_session, stream_chat, visible_models
+from .chat import (
+    close_session_directories,
+    create_session,
+    list_sessions,
+    load_session,
+    save_session,
+    stream_chat,
+    visible_models,
+)
 from .guard import leaks
 from .memory import Memory, PILES
 from .models import public_tags, suggest
@@ -104,8 +113,16 @@ def update_profile(install: Path, patch: dict) -> dict:
     profile["workspace"] = str(workspace)
     if "file_access" in patch:
         profile["file_access"] = bool(patch["file_access"])
-        if profile["file_access"] and not profile.get("user_root"):
-            profile["user_root"] = str(Path.home())
+        if profile["file_access"]:
+            if not profile.get("user_root"):
+                profile["user_root"] = str(Path.home())
+            if not profile.get("grant"):
+                profile["grant"] = uuid.uuid4().hex
+        else:
+            profile.pop("user_root", None)
+            profile.pop("grant", None)
+            save_profile(install, profile)
+            close_session_directories(install)
     if "scan_allowed" in patch:
         profile["scan_allowed"] = bool(patch["scan_allowed"])
     if "providers" in patch:
@@ -322,16 +339,10 @@ def make_handler(install: Path, chat_opener=None, scan_opener=None, voice_engine
                     session = load_session(root, str(body.get("session_id") or ""))
                     raw = str(body.get("path") or "").strip()
                     if raw:
-                        session["work_path"] = str(
-                            accept_directory(
-                                raw,
-                                root,
-                                file_access=bool(profile.get("file_access")),
-                                user_root=str(profile.get("user_root") or ""),
-                            )
-                        )
+                        session.update(grant_directory(raw, root, profile))
                     else:
                         session.pop("work_path", None)
+                        session.pop("work_grant", None)
                     self._json(200, save_session(root, session))
                 except ValueError as exc:
                     self._json(400, {"error": str(exc)})
