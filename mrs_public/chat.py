@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Iterator
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from .bounds import accept_directory
 from .canvas import read_under
@@ -20,7 +20,7 @@ from .pack import read_prompt, sampler
 from .recall import context_block, ensure_roots, learn, turn_note
 from .lookup import Resolver, fence, fetch_page, search_web
 from .lookup import enabled as web_enabled
-from .providers import Provider
+from .providers import Provider, open_model
 from .scan import Scan, scan_ollama
 from .skills import load_skills, pick_skill
 
@@ -293,7 +293,7 @@ def _system(text: str, *, file_access: bool, has_vision: bool = False) -> tuple[
 
 
 def iter_ollama(host: str, payload: dict, opener: Callable | None) -> Iterator[str]:
-    fetch = opener or urlopen
+    fetch = opener or open_model
     req = Request(
         host.rstrip("/") + "/api/chat",
         data=json.dumps(payload).encode("utf-8"),
@@ -321,7 +321,7 @@ def iter_openai(url: str, payload: dict, opener: Callable | None) -> Iterator[st
     The wire shape is server-sent events: ``data: {json}`` lines and a
     final ``data: [DONE]``. Content arrives at choices[0].delta.content.
     """
-    fetch = opener or urlopen
+    fetch = opener or open_model
     req = Request(
         url.rstrip("/") + "/chat/completions",
         data=json.dumps(payload).encode("utf-8"),
